@@ -1,0 +1,108 @@
+---
+title: "Trabajo Modelos de Regresión"
+format: html
+editor: visual
+---
+
+# 1. PRESENTACIÓN Y DESCRIPCIÓN DEL DATASET
+
+Dataset: <https://archive.ics.uci.edu/dataset/162/forest+fires>
+
+## INTRODUCCIÓN
+
+------------------------------------------------------------------------
+
+## DESCRIPCIÓN DE VARIABLES
+
+### Variables numéricas
+
+Estas variables se utilizan para situar el incendio en un plano de 2 dimensiones (una cuadrícula). Al combinar **X** e **Y**, los investigadores pueden analizar si los incendios tienden a ocurrir en áreas específicas del parque (por ejemplo, en el noreste o en el centro) y si la ubicación influye en otras variables como el área quemada. 
+
+-   **X:**
+
+Variable numérica discreta que representa la **coordenada espacial en el eje horizontal (este-oeste)** dentro del mapa del Parque de Montesinho. Toma valores enteros del **1 al 9**, indicando la posición en la cuadrícula del mapa. Su función es ayudar a identificar en qué sección del mapa, de izquierda a derecha, se originó o se registró el incendio.
+
+-   **Y:**
+
+Variable numérica discreta que representa la **coordenada espacial en el eje vertical (norte-sur)** dentro del mapa del Parque de Montesinho. Toma valores enteros del **2 al 9**, indicando la posición vertical en la cuadrícula del mapa. Ayuda a identificar en qué sección del mapa, de arriba hacia abajo, se encuentra el incendio.
+
+-   **FFMC (Fine Fuel Moisture Code)**
+
+Variable **numérica continua** que forma parte del sistema canadiense **FWI (Fire Weather Index)**. Este índice estima el contenido de humedad del combustible fino superficial (lo secos que están los materiales más pequeños y ligeros del suelo del bosque, como hojas secas, pequeñas ramas). Representa la facilidad con la que puede iniciarse un incendio forestal.
+
+-   **DMC (Duff Moisture Code)**
+
+Variable **numérica continua** que mide el contenido de humedad de las capas medias de materia orgánica en el suelo (la materia orgánica que está debajo de las hojas superficiales pero no tan profunda como el suelo mineral). Refleja la sequedad acumulada en periodos de duración intermedia (semanas). Este índice está relacionado con la capacidad del fuego para mantenerse activo una vez iniciado. 
+
+-   **DC (Drought Code)**
+
+Variable **numérica continua** que representa el nivel de sequía profunda en el suelo y en los combustibles forestales gruesos. Es un indicador de sequía a largo plazo (meses).
+
+-   **ISI (Initial Spread Index)**
+
+Variable **numérica continua** que mide la velocidad potencial de propagación inicial del incendio.
+
+-   **TEMP (TEMPERATURA)**
+
+Variable numérica continua que mide la temperatura ambiente en grados Celsius (°C). En el dataset, los valores oscilan entre 2.2 y 33.30 °C, y representan la medición capturada en el momento en que se registró el incendio.
+
+-   **RH (Relative Humidity)**
+
+Variable numérica continua. Es la relación entre la cantidad de vapor de agua que tiene el aire y la cantidad máxima que podría contener a esa misma temperatura. Se mide de **15% a 100%**
+
+### Variables categóricas
+
+-   **MONTH:**
+
+Variable categórica ordinal que indica el **mes del año** en el que ocurre la observación. Toma valores categóricos desde **'jan' hasta 'dec'**. 
+
+-   **DAY:**
+
+Variable categórica ordinal que indica el **día de la semana** en el que ocurre la observación. Toma valores desde **'mon' hasta 'sun'**.
+
+##### Abrimos el dataset:
+
+```{r}
+datos <- read.csv("C:/Users/ruthc/OneDrive - Universidad Rey Juan Carlos/Escritorio/trabajo modelos/forestfires.csv")
+print(datos)
+View(datos)    
+dim(datos)    
+head(datos)
+```
+
+##### Cargamos las librerías:
+
+```{r}
+
+library(ggplot2)
+library(tidyverse)
+library(summarytools)
+library(GGally)
+library(gt)
+library(flextable)
+library(knitr) 
+library(corrplot)
+#install.packages("modeest")   # solo la primera vez
+library(modeest)
+#install.packages("moments")
+library(moments)
+#filtar dataset
+library(dplyr)
+```
+
+Modelo lineal simple: area con temperatura
+
+```{r}
+datos$log_area <- log(datos$area + 1)
+modelo_simple <- lm(log_area ~ temp, data = datos)
+summary(modelo_simple)
+```
+
+Modelo lineal múltiple: area con temperatura,viento,humedad
+
+```{r}
+datos$log_area <- log(datos$area + 1)
+modelo_multiple <- lm(log_area ~ temp + wind + RH, data = datos)
+summary(modelo_multiple)
+plot(modelo_multiple)
+```
