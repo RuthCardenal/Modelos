@@ -10,55 +10,42 @@ Dataset: <https://archive.ics.uci.edu/dataset/162/forest+fires>
 
 ## INTRODUCCIÓN
 
+Los incendios forestales representan un problema medioambiental crítico, ya que generan severos daños económicos y ecológicos, además de poner en peligro vidas humanas. En este contexto, la detección temprana y la capacidad de predicción son elementos clave para mitigar y controlar este tipo de fenómenos. Los datos analizados fueron recolectados en el Parque Natural de Montesinho, ubicado en Portugal, donde para cada registro de incendio se capturaron las condiciones climáticas mediante una estación meteorológica local en el momento exacto en que se detectó el incidente.
+
+El objetivo principal de este análisis es predecir la variable area, la cual expresa la superficie total quemada en hectáreas; es importante notar que esta variable suele presentar muchos valores cercanos a cero, lo que indica incendios que fueron controlados rápidamente antes de expandirse.
+
 ------------------------------------------------------------------------
 
 ## DESCRIPCIÓN DE VARIABLES
 
-### Variables numéricas
+### Variables numéricas 
 
-Estas variables se utilizan para situar el incendio en un plano de 2 dimensiones (una cuadrícula). Al combinar **X** e **Y**, los investigadores pueden analizar si los incendios tienden a ocurrir en áreas específicas del parque (por ejemplo, en el noreste o en el centro) y si la ubicación influye en otras variables como el área quemada. 
+1.  **X:** Variable numérica discreta que representa la coordenada espacial en el eje horizontal (este-oeste) dentro del mapa del Parque de Montesinho. Toma valores enteros del 1 al 9, indicando la posición en la cuadrícula. Su función es identificar en qué sección del mapa, de izquierda a derecha, se registró el incendio.
 
--   **X:**
+2.  **Y:** Variable numérica discreta que representa la coordenada espacial en el eje vertical (norte-sur) dentro del mapa del Parque de Montesinho. Toma valores enteros del 2 al 9, indicando la posición vertical en la cuadrícula. Ayuda a identificar en qué sección del mapa, de sur a norte, se encuentra el incidente.
 
-Variable numérica discreta que representa la **coordenada espacial en el eje horizontal (este-oeste)** dentro del mapa del Parque de Montesinho. Toma valores enteros del **1 al 9**, indicando la posición en la cuadrícula del mapa. Su función es ayudar a identificar en qué sección del mapa, de izquierda a derecha, se originó o se registró el incendio.
+3.  **FFMC (Fine Fuel Moisture Code):** Variable numérica continua que forma parte del sistema canadiense FWI (Fire Weather Index). Este índice estima el contenido de humedad del combustible fino superficial (lo secos que están los materiales más pequeños y ligeros del suelo del bosque, como hojas secas, pequeñas ramas). Representa la facilidad con la que puede iniciarse un incendio forestal. En el dataset, los valores van de 18.7 a 96.20, donde los valotes cerca de 18.7 significa que los combustibles finos (hojas secas, pasto) están muy empapados y el riesgo de ignición es casi nulo. Mientras que si, está cerca de 96.20 significa que el combustible está extremadamente seco. Cualquier chispa, por pequeña que sea, provocará un incendio inmediato.
 
--   **Y:**
+4.  **DMC (Duff Moisture Code):** Variable numérica continua que mide el contenido de humedad de las capas medias de materia orgánica descompuesta (humus). Refleja la sequedad acumulada en periodos de duración intermedia (semanas). En este dataset, los valores oscilan entre 1.1 y 291.3, donde valores más altos indican mayor sequedad y una mayor probabilidad de que el fuego se mantenga activo y sea difícil de extinguir.
 
-Variable numérica discreta que representa la **coordenada espacial en el eje vertical (norte-sur)** dentro del mapa del Parque de Montesinho. Toma valores enteros del **2 al 9**, indicando la posición vertical en la cuadrícula del mapa. Ayuda a identificar en qué sección del mapa, de arriba hacia abajo, se encuentra el incendio.
+5.  **DC (Drought Code):** Variable numérica continua que representa el nivel de sequía profunda en el suelo y en los combustibles forestales gruesos (como troncos caídos y raíces profundas). Es un indicador de sequía acumulada a largo plazo (meses). En el dataset, los valores van de **7.9 a 860.6**, donde los niveles más altos indican una sequía extrema que puede provocar incendios subterráneos difíciles de detectar y sofocar.
 
--   **FFMC (Fine Fuel Moisture Code)**
+6.  **ISI (Initial Spread Index):**  Variable numérica continua que mide la velocidad potencial de propagación inicial del incendio. Este índice combina los efectos del **viento** y del código de humedad de los combustibles finos (FFMC) para predecir qué tan rápido se extenderá el fuego justo después de la ignición. En el dataset, los valores oscilan entre **0.0 y 56.1**, donde un valor más alto indica una propagación mucho más rápida y agresiva.
 
-Variable **numérica continua** que forma parte del sistema canadiense **FWI (Fire Weather Index)**. Este índice estima el contenido de humedad del combustible fino superficial (lo secos que están los materiales más pequeños y ligeros del suelo del bosque, como hojas secas, pequeñas ramas). Representa la facilidad con la que puede iniciarse un incendio forestal.
+7.  **temp (Temperatura):** Variable numérica continua que mide la temperatura ambiente en grados Celsius (°C). En el dataset, los valores oscilan entre 2.2 y 33.30 °C, y representan la medición capturada en el momento en que se registró el incendio.
 
--   **DMC (Duff Moisture Code)**
+8.  **RH (Relative Humidity):** Variable numérica continua. Es la relación entre la cantidad de vapor de agua que tiene el aire y la cantidad máxima que podría contener a esa misma temperatura. Se mide de **15% a 100%.**
 
-Variable **numérica continua** que mide el contenido de humedad de las capas medias de materia orgánica en el suelo (la materia orgánica que está debajo de las hojas superficiales pero no tan profunda como el suelo mineral). Refleja la sequedad acumulada en periodos de duración intermedia (semanas). Este índice está relacionado con la capacidad del fuego para mantenerse activo una vez iniciado. 
+9.  **wind(velocidad del aire):** Variable numérica continua. Representa la velocidad del viento medida en el exterior del parque. El viento es un factor clave porque aporta oxígeno a la combustión y transporta brasas, creando nuevos focos. En este dataset, los valores son relativamente bajos, lo que sugiere brisas moderadas. A mayor velocidad, la propagación del incendio es más errática y rápida.
 
--   **DC (Drought Code)**
+10. **rain (Precipitación Exterior):** Variable numérica continua. Representa la cantidad de lluvia caída por metro cuadrado en el momento del registro. En el dataset, los valores van de 0.0 a 6.4 mm/m².Valores cercanos a 0 indican sequedad, lo que favorece la ignición y propagación del incendio; valores más altos aumentan la humedad y dificultan su expansión.
 
-Variable **numérica continua** que representa el nivel de sequía profunda en el suelo y en los combustibles forestales gruesos. Es un indicador de sequía a largo plazo (meses).
-
--   **ISI (Initial Spread Index)**
-
-Variable **numérica continua** que mide la velocidad potencial de propagación inicial del incendio.
-
--   **TEMP (TEMPERATURA)**
-
-Variable numérica continua que mide la temperatura ambiente en grados Celsius (°C). En el dataset, los valores oscilan entre 2.2 y 33.30 °C, y representan la medición capturada en el momento en que se registró el incendio.
-
--   **RH (Relative Humidity)**
-
-Variable numérica continua. Es la relación entre la cantidad de vapor de agua que tiene el aire y la cantidad máxima que podría contener a esa misma temperatura. Se mide de **15% a 100%**
+11. **area(superficie quemada):** Variable numérica continua. Es la variable que se busca explicar y predecir a partir de la interacción de los factores meteorológicos, geográficos y los índices de combustible mencionados anteriormente. Representa la magnitud del impacto ambiental mediante la medición de la extensión total de terreno forestal afectada por el fuego. Está expresada en hectáreas (ha), con valores que oscilan entre 0.00 y 1090.84 ha. Los valores de 0.00 indican incendios que fueron detectados y controlados de forma inmediata, afectando una superficie tan reducida que no resulta medible en hectáreas, mientras que los valores más elevados corresponden a incendios de gran magnitud que lograron propagarse bajo condiciones críticas.
 
 ### Variables categóricas
 
--   **MONTH:**
-
-Variable categórica ordinal que indica el **mes del año** en el que ocurre la observación. Toma valores categóricos desde **'jan' hasta 'dec'**. 
-
--   **DAY:**
-
-Variable categórica ordinal que indica el **día de la semana** en el que ocurre la observación. Toma valores desde **'mon' hasta 'sun'**.
+1.  **MONTH:** Variable categórica ordinal que indica el **mes del año** en el que ocurre la observación. Toma valores categóricos desde **'jan' hasta 'dec'**.
+2.  **DAY:** Variable categórica ordinal que indica el **día de la semana** en el que ocurre la observación. Toma valores desde **'mon' hasta 'sun'**.
 
 ##### Abrimos el dataset:
 
