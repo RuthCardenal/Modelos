@@ -18,7 +18,7 @@ El objetivo principal de este análisis es predecir la variable area, la cual ex
 
 ## DESCRIPCIÓN DE VARIABLES
 
-### Variables numéricas 
+### Variables numéricas
 
 1.  **X:** Variable numérica discreta que representa la coordenada espacial en el eje horizontal (este-oeste) dentro del mapa del Parque de Montesinho. Toma valores enteros del 1 al 9, indicando la posición en la cuadrícula. Su función es identificar en qué sección del mapa, de izquierda a derecha, se registró el incendio.
 
@@ -40,12 +40,14 @@ El objetivo principal de este análisis es predecir la variable area, la cual ex
 
 10. **rain (Precipitación Exterior):** Variable numérica continua. Representa la cantidad de lluvia caída por metro cuadrado en el momento del registro. En el dataset, los valores van de 0.0 a 6.4 mm/m².Valores cercanos a 0 indican sequedad, lo que favorece la ignición y propagación del incendio; valores más altos aumentan la humedad y dificultan su expansión.
 
-11. **area(superficie quemada):** Variable numérica continua. Es la variable que se busca explicar y predecir a partir de la interacción de los factores meteorológicos, geográficos y los índices de combustible mencionados anteriormente. Representa la magnitud del impacto ambiental mediante la medición de la extensión total de terreno forestal afectada por el fuego. Está expresada en hectáreas (ha), con valores que oscilan entre 0.00 y 1090.84 ha. Los valores de 0.00 indican incendios que fueron detectados y controlados de forma inmediata, afectando una superficie tan reducida que no resulta medible en hectáreas, mientras que los valores más elevados corresponden a incendios de gran magnitud que lograron propagarse bajo condiciones críticas.
+11. **area (superficie quemada):** Variable numérica continua. Es la variable que se busca explicar y predecir a partir de la interacción de los factores meteorológicos, geográficos y los índices de combustible mencionados anteriormente. Representa la magnitud del impacto ambiental mediante la medición de la extensión total de terreno forestal afectada por el fuego. Está expresada en hectáreas (ha), con valores que oscilan entre 0.00 y 1090.84 ha. Los valores de 0.00 indican incendios que fueron detectados y controlados de forma inmediata, afectando una superficie tan reducida que no resulta medible en hectáreas, mientras que los valores más elevados corresponden a incendios de gran magnitud que lograron propagarse bajo condiciones críticas.
 
 ### Variables categóricas
 
-1.  **MONTH:** Variable categórica ordinal que indica el **mes del año** en el que ocurre la observación. Toma valores categóricos desde **'jan' hasta 'dec'**.
-2.  **DAY:** Variable categórica ordinal que indica el **día de la semana** en el que ocurre la observación. Toma valores desde **'mon' hasta 'sun'**.
+1.  **month:** Variable categórica ordinal que indica el **mes del año** en el que ocurre la observación. Toma valores categóricos desde **'jan' hasta 'dec'**.
+2.  **day:** Variable categórica ordinal que indica el **día de la semana** en el que ocurre la observación. Toma valores desde **'mon' hasta 'sun'**.
+
+# 2. PREPARACIÓN DE DATOS
 
 ##### Abrimos el dataset:
 
