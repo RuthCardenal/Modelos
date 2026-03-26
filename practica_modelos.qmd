@@ -18,6 +18,14 @@ El objetivo principal de este análisis es predecir la variable area, la cual ex
 
 ## DESCRIPCIÓN DE VARIABLES
 
+```{r}
+
+```
+
+```{r}
+
+```
+
 ### Variables numéricas
 
 1.  **X:** Variable numérica discreta que representa la coordenada espacial en el eje horizontal (este-oeste) dentro del mapa del Parque de Montesinho. Toma valores enteros del 1 al 9, indicando la posición en la cuadrícula. Su función es identificar en qué sección del mapa, de izquierda a derecha, se registró el incendio.
@@ -52,7 +60,11 @@ El objetivo principal de este análisis es predecir la variable area, la cual ex
 ##### Abrimos el dataset:
 
 ```{r}
-datos <- read.csv("C:/Users/ruthc/OneDrive - Universidad Rey Juan Carlos/Escritorio/trabajo modelos/forestfires.csv")
+
+```
+
+```{r}
+datos <- read.csv("forestfires.csv")
 print(datos)
 View(datos)    
 dim(datos)    
@@ -94,4 +106,117 @@ datos$log_area <- log(datos$area + 1)
 modelo_multiple <- lm(log_area ~ temp + wind + RH, data = datos)
 summary(modelo_multiple)
 plot(modelo_multiple)
+```
+
+```{r}
+#---------- DIVISIÓN CALOR-FRÍO
+
+# 1. Variables climáticas (mantenemos tu lógica previa)
+calor <- c("jun", "jul", "aug", "sep")
+frio  <- c("jan", "feb", "mar", "apr", "may", "oct", "nov", "dec")
+
+datos$meses_calor <- ifelse(datos$month %in% calor, 1, 0)
+datos$meses_frio  <- ifelse(datos$month %in% frio, 1, 0)
+
+View(datos)
+```
+
+```{r}
+
+#DIVISION TRAIN TEST VALIDACIÓN
+# 2. Configuración de aleatoriedad
+set.seed(2138)
+n <- nrow(datos)
+indices_disponibles <- 1:n
+
+# 3. Extracción secuencial (Garantiza que no se repitan)
+# Extraemos el 50% para Train
+indices_train <- sample(indices_disponibles, size = floor(0.50 * n))
+
+# Quitamos los de Train de la lista de disponibles
+indices_restantes <- setdiff(indices_disponibles, indices_train)
+
+# De lo que sobra, extraemos el 25% del total para Test
+# (Equivale al 50% de los restantes)
+indices_test <- sample(indices_restantes, size = floor(0.25 * n))
+
+# Validación es lo que queda después de quitar Train y Test
+indices_valid <- setdiff(indices_restantes, indices_test)
+
+# 4. Creación de Datasets
+datos.train <- datos[indices_train, ]
+datos.test  <- datos[indices_test, ]
+datos.valid <- datos[indices_valid, ]
+View(datos.train)
+dim(datos.test) #129 columnas
+View(datos.test)
+dim(datos.train) #258 columnas
+View(datos.valid)
+dim(datos.valid) #130 columnas
+```
+
+```{r}
+ggplot(data = datos.train) +
+  geom_histogram(mapping = aes(x = X), binwidth = 5)
+```
+
+```{r}
+ggplot(data = datos.train) +
+  geom_histogram(mapping = aes(x = Y), binwidth = 5)
+```
+
+```{r}
+ggplot(data = datos.train) +
+  geom_histogram(mapping = aes(x = FFMC), binwidth = 5)
+```
+
+```{r}
+ggplot(datos.train, aes(x = DMC)) +
+geom_density() +
+ggtitle('KDE')
+```
+
+```{r}
+ggplot(datos.train, aes(x = DC)) +
+geom_density() +
+ggtitle('KDE')
+```
+
+```{r}
+ggplot(data = datos.train) +
+  geom_histogram(mapping = aes(x = ISI), binwidth = 5)
+```
+
+```{r}
+ggplot(data = datos.train) +
+  geom_histogram(mapping = aes(x = temp), binwidth = 5)
+```
+
+```{r}
+ggplot(data = datos.train) +
+  geom_histogram(mapping = aes(x = wind), binwidth = 5)
+```
+
+```{r}
+ggplot(datos.train, aes(x = rain)) +
+geom_density() +
+ggtitle('KDE')
+
+```
+
+```{r}
+ggplot(data = datos.train) +
+  geom_histogram(mapping = aes(x = area), binwidth = 60)
+```
+
+CATEGÓRICAS
+
+```{r}
+ggplot(data = datos.train) +
+  geom_bar(mapping = aes(x = meses_calor))
+```
+
+```{r}
+ggplot(data = datos.train) +
+  geom_bar(mapping = aes(x = meses_frio))
 ```
