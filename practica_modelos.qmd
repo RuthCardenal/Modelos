@@ -76,6 +76,7 @@ head(datos)
 ```{r}
 
 library(ggplot2)
+library(patchwork)
 library(tidyverse)
 library(summarytools)
 library(GGally)
@@ -155,19 +156,86 @@ View(datos.valid)
 dim(datos.valid) #130 columnas
 ```
 
-```{r}
-ggplot(data = datos.train) +
-  geom_histogram(mapping = aes(x = X), binwidth = 5)
+```{r, fig.width=12, fig.height=6, dpi=300}
+p1 <- ggplot(data = datos.train, aes(x = X)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
+  scale_x_continuous(breaks = 1:9) + 
+  theme_minimal() +
+  labs(title = "Distribución de Incendios por Coordenada X",
+       x = "Posición Este-Oeste",
+       y = "Frecuencia de Incendios")
+
+p2 <- ggplot(data = datos.train, aes(x = Y)) +
+  geom_histogram(binwidth = 1, fill = "steelblue", color = "white") +
+  scale_x_continuous(breaks = 2:9) + 
+  theme_minimal() +
+  labs(title = "Distribución de Incendios por Coordenada Y",
+       x = "Posición Norte-Sur",
+       y = "Frecuencia de Incendios")
+
+p1 + p2 + plot_annotation(title = "Distribución de la Frecuencia de Incendios por Coordenadas Espaciales (X, Y)")
 ```
 
 ```{r}
-ggplot(data = datos.train) +
-  geom_histogram(mapping = aes(x = Y), binwidth = 5)
-```
 
-```{r}
-ggplot(data = datos.train) +
-  geom_histogram(mapping = aes(x = FFMC), binwidth = 5)
+
+# --- GRÁFICO 1: FFMC ---
+grafico_ffmc <- ggplot(data = datos.train, aes(x = FFMC)) +
+  # El histograma debe estar en escala de 'density' para que la línea quepa
+  geom_histogram(aes(y = after_stat(density)), binwidth = 2, fill = "lightblue", color = "white") +
+  # Añadimos la línea de densidad (curva suavizada)
+  geom_density(color = "steelblue4", linewidth = 1) +
+  theme_minimal() +
+  labs(title = "FFMC: Riesgo de Ignición", 
+       x = "Índice de humedad fina", 
+       y = "Densidad") +
+  theme(plot.title = element_text(size = 11, face = "bold"),
+        axis.title = element_text(size = 9))
+
+# --- GRÁFICO 2: DMC ---
+grafico_dmc <- ggplot(data = datos.train, aes(x = DMC)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 10, fill = "lightblue", color = "white") +
+  geom_density(color = "steelblue4", linewidth = 1) +
+  theme_minimal() +
+  labs(title = "DMC: Sequía Intermedia", 
+       x = "Índice de capas medias", 
+       y = "Densidad") +
+  theme(plot.title = element_text(size = 11, face = "bold"),
+        axis.title = element_text(size = 9))
+
+# --- GRÁFICO 3: DC ---
+grafico_dc <- ggplot(data = datos.train, aes(x = DC)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 30, fill = "lightblue", color = "white") +
+  geom_density(color = "steelblue4", linewidth = 1) +
+  theme_minimal() +
+  labs(title = "DC: Sequía a Largo Plazo", 
+       x = "Índice de sequía profunda", 
+       y = "Densidad") +
+  theme(plot.title = element_text(size = 11, face = "bold"),
+        axis.title = element_text(size = 9))
+
+# --- GRÁFICO 4: ISI ---
+grafico_isi <- ggplot(data = datos.train, aes(x = ISI)) +
+  geom_histogram(aes(y = after_stat(density)), binwidth = 2, fill = "lightblue", color = "white") +
+  geom_density(color = "steelblue4", linewidth = 1) +
+  theme_minimal() +
+  labs(title = "ISI: Índice de Propagación", 
+       x = "Velocidad de propagación", 
+       y = "Densidad") +
+  theme(plot.title = element_text(size = 11, face = "bold"),
+        axis.title = element_text(size = 9))
+
+# --- UNIR LOS CUATRO GRÁFICOS ---
+(grafico_ffmc + grafico_dmc) / (grafico_dc + grafico_isi) + 
+  plot_annotation(
+    title = "Distribución de Índices de Humedad y Propagación (FWI)",
+    subtitle = "Histogramas de densidad con curva de ajuste suavizada (KDE)",
+    theme = theme(plot.title = element_text(size = 15, face = "bold", hjust = 0.5,                                             margin = margin(b = 5)), 
+                  plot.subtitle = element_text(size = 11, hjust = 0.5, 
+                                                margin = margin(b = 20)) 
+    )
+  )
+  
 ```
 
 ```{r}
