@@ -1,6 +1,12 @@
 ---
-title: "Trabajo Modelos de Regresión"
-format: html
+title: "FOREST FIRES"
+author: "María Cristina Quintana Sevajanes, Ruth Cardenal Millán, Kimberly Perez Dionisio"
+format: 
+  html:
+    toc: true
+    toc-location: left  
+    code-fold: true      
+    theme: cosmo
 editor: visual
 ---
 
@@ -18,50 +24,38 @@ El objetivo principal de este análisis es predecir la variable area, la cual ex
 
 ## DESCRIPCIÓN DE VARIABLES
 
-```{r}
-
-```
-
-```{r}
-
-```
-
 ### Variables numéricas
 
-1.  **X:** Variable numérica discreta que representa la coordenada espacial en el eje horizontal (este-oeste) dentro del mapa del Parque de Montesinho. Toma valores enteros del 1 al 9, indicando la posición en la cuadrícula. Su función es identificar en qué sección del mapa, de izquierda a derecha, se registró el incendio.
+-   **X:** Variable numérica discreta que representa la coordenada espacial en el eje horizontal (este-oeste) dentro del mapa del Parque de Montesinho. Toma valores enteros del 1 al 9, indicando la posición en la cuadrícula. Su función es identificar en qué sección del mapa, de izquierda a derecha, se registró el incendio.
 
-2.  **Y:** Variable numérica discreta que representa la coordenada espacial en el eje vertical (norte-sur) dentro del mapa del Parque de Montesinho. Toma valores enteros del 2 al 9, indicando la posición vertical en la cuadrícula. Ayuda a identificar en qué sección del mapa, de sur a norte, se encuentra el incidente.
+-   **Y:** Variable numérica discreta que representa la coordenada espacial en el eje vertical (norte-sur) dentro del mapa del Parque de Montesinho. Toma valores enteros del 2 al 9, indicando la posición vertical en la cuadrícula. Ayuda a identificar en qué sección del mapa, de sur a norte, se encuentra el incidente.
 
-3.  **FFMC (Fine Fuel Moisture Code):** Variable numérica continua que forma parte del sistema canadiense FWI (Fire Weather Index). Este índice estima el contenido de humedad del combustible fino superficial (lo secos que están los materiales más pequeños y ligeros del suelo del bosque, como hojas secas, pequeñas ramas). Representa la facilidad con la que puede iniciarse un incendio forestal. En el dataset, los valores van de 18.7 a 96.20, donde los valotes cerca de 18.7 significa que los combustibles finos (hojas secas, pasto) están muy empapados y el riesgo de ignición es casi nulo. Mientras que si, está cerca de 96.20 significa que el combustible está extremadamente seco. Cualquier chispa, por pequeña que sea, provocará un incendio inmediato.
+-   **FFMC (Fine Fuel Moisture Code):** Variable numérica continua que forma parte del sistema canadiense FWI (Fire Weather Index). Este índice estima el contenido de humedad del combustible fino superficial (lo secos que están los materiales más pequeños y ligeros del suelo del bosque, como hojas secas, pequeñas ramas). Representa la facilidad con la que puede iniciarse un incendio forestal. En el dataset, los valores van de 18.7 a 96.20, donde los valotes cerca de 18.7 significa que los combustibles finos (hojas secas, pasto) están muy empapados y el riesgo de ignición es casi nulo. Mientras que si, está cerca de 96.20 significa que el combustible está extremadamente seco. Cualquier chispa, por pequeña que sea, provocará un incendio inmediato.
 
-4.  **DMC (Duff Moisture Code):** Variable numérica continua que mide el contenido de humedad de las capas medias de materia orgánica descompuesta (humus). Refleja la sequedad acumulada en periodos de duración intermedia (semanas). En este dataset, los valores oscilan entre 1.1 y 291.3, donde valores más altos indican mayor sequedad y una mayor probabilidad de que el fuego se mantenga activo y sea difícil de extinguir.
+-   **DMC (Duff Moisture Code):** Variable numérica continua que mide el contenido de humedad de las capas medias de materia orgánica descompuesta (humus). Refleja la sequedad acumulada en periodos de duración intermedia (semanas). En este dataset, los valores oscilan entre 1.1 y 291.3, donde valores más altos indican mayor sequedad y una mayor probabilidad de que el fuego se mantenga activo y sea difícil de extinguir.
 
-5.  **DC (Drought Code):** Variable numérica continua que representa el nivel de sequía profunda en el suelo y en los combustibles forestales gruesos (como troncos caídos y raíces profundas). Es un indicador de sequía acumulada a largo plazo (meses). En el dataset, los valores van de **7.9 a 860.6**, donde los niveles más altos indican una sequía extrema que puede provocar incendios subterráneos difíciles de detectar y sofocar.
+-   **DC (Drought Code):** Variable numérica continua que representa el nivel de sequía profunda en el suelo y en los combustibles forestales gruesos (como troncos caídos y raíces profundas). Es un indicador de sequía acumulada a largo plazo (meses). En el dataset, los valores van de 7.9 a 860.6, donde los niveles más altos indican una sequía extrema que puede provocar incendios subterráneos difíciles de detectar y sofocar.
 
-6.  **ISI (Initial Spread Index):**  Variable numérica continua que mide la velocidad potencial de propagación inicial del incendio. Este índice combina los efectos del **viento** y del código de humedad de los combustibles finos (FFMC) para predecir qué tan rápido se extenderá el fuego justo después de la ignición. En el dataset, los valores oscilan entre **0.0 y 56.1**, donde un valor más alto indica una propagación mucho más rápida y agresiva.
+-   **ISI (Initial Spread Index):** Variable numérica continua que mide la velocidad potencial de propagación inicial del incendio. Este índice combina los efectos del viento y del código de humedad de los combustibles finos (FFMC) para predecir qué tan rápido se extenderá el fuego justo después de la ignición. En el dataset, los valores oscilan entre 0.0 y 56.1, donde un valor más alto indica una propagación mucho más rápida y agresiva.
 
-7.  **temp (Temperatura):** Variable numérica continua que mide la temperatura ambiente en grados Celsius (°C). En el dataset, los valores oscilan entre 2.2 y 33.30 °C, y representan la medición capturada en el momento en que se registró el incendio.
+-   **temp (Temperatura):** Variable numérica continua que mide la temperatura ambiente en grados Celsius (°C). En el dataset, los valores oscilan entre 2.2 y 33.30 °C, y representan la medición capturada en el momento en que se registró el incendio.
 
-8.  **RH (Relative Humidity):** Variable numérica continua. Es la relación entre la cantidad de vapor de agua que tiene el aire y la cantidad máxima que podría contener a esa misma temperatura. Se mide de **15% a 100%.**
+-   **RH (Relative Humidity):** Variable numérica continua. Es la relación entre la cantidad de vapor de agua que tiene el aire y la cantidad máxima que podría contener a esa misma temperatura. Se mide de **15% a 100%.**
 
-9.  **wind(velocidad del aire):** Variable numérica continua. Representa la velocidad del viento medida en el exterior del parque. El viento es un factor clave porque aporta oxígeno a la combustión y transporta brasas, creando nuevos focos. En este dataset, los valores son relativamente bajos, lo que sugiere brisas moderadas. A mayor velocidad, la propagación del incendio es más errática y rápida.
+-   **wind (Velocidad del aire):** Variable numérica continua. Representa la velocidad del viento medida en el exterior del parque. El viento es un factor clave porque aporta oxígeno a la combustión y transporta brasas, creando nuevos focos. En este dataset, los valores son relativamente bajos, lo que sugiere brisas moderadas. A mayor velocidad, la propagación del incendio es más errática y rápida.
 
-10. **rain (Precipitación Exterior):** Variable numérica continua. Representa la cantidad de lluvia caída por metro cuadrado en el momento del registro. En el dataset, los valores van de 0.0 a 6.4 mm/m².Valores cercanos a 0 indican sequedad, lo que favorece la ignición y propagación del incendio; valores más altos aumentan la humedad y dificultan su expansión.
+-   **rain (Precipitación exterior):** Variable numérica continua. Representa la cantidad de lluvia caída por metro cuadrado en el momento del registro. En el dataset, los valores van de 0.0 a 6.4 mm/m².Valores cercanos a 0 indican sequedad, lo que favorece la ignición y propagación del incendio; valores más altos aumentan la humedad y dificultan su expansión.
 
-11. **area (superficie quemada):** Variable numérica continua. Es la variable que se busca explicar y predecir a partir de la interacción de los factores meteorológicos, geográficos y los índices de combustible mencionados anteriormente. Representa la magnitud del impacto ambiental mediante la medición de la extensión total de terreno forestal afectada por el fuego. Está expresada en hectáreas (ha), con valores que oscilan entre 0.00 y 1090.84 ha. Los valores de 0.00 indican incendios que fueron detectados y controlados de forma inmediata, afectando una superficie tan reducida que no resulta medible en hectáreas, mientras que los valores más elevados corresponden a incendios de gran magnitud que lograron propagarse bajo condiciones críticas.
+-   **area (Superficie quemada):** Variable numérica continua. Es la variable que se busca explicar y predecir a partir de la interacción de los factores meteorológicos, geográficos y los índices de combustible mencionados anteriormente. Representa la magnitud del impacto ambiental mediante la medición de la extensión total de terreno forestal afectada por el fuego. Está expresada en hectáreas (ha), con valores que oscilan entre 0.00 y 1090.84 ha. Los valores de 0.00 indican incendios que fueron detectados y controlados de forma inmediata, afectando una superficie tan reducida que no resulta medible en hectáreas, mientras que los valores más elevados corresponden a incendios de gran magnitud que lograron propagarse bajo condiciones críticas.
 
 ### Variables categóricas
 
-1.  **month:** Variable categórica ordinal que indica el **mes del año** en el que ocurre la observación. Toma valores categóricos desde **'jan' hasta 'dec'**.
-2.  **day:** Variable categórica ordinal que indica el **día de la semana** en el que ocurre la observación. Toma valores desde **'mon' hasta 'sun'**.
+-   **month (mes):** Variable categórica ordinal que indica el mes del año en el que ocurre la observación. Toma valores categóricos desde 'jan' hasta 'dec'.
+-   **day (día):** Variable categórica ordinal que indica el día de la semana en el que ocurre la observación. Toma valores desde 'mon' hasta 'sun'.
 
 # 2. PREPARACIÓN DE DATOS
 
-##### Abrimos el dataset:
-
-```{r}
-
-```
+#### Abrimos el dataset:
 
 ```{r}
 datos <- read.csv("forestfires.csv")
@@ -71,7 +65,7 @@ dim(datos)
 head(datos)
 ```
 
-##### Cargamos las librerías:
+#### Cargamos las librerías:
 
 ```{r}
 
@@ -84,13 +78,15 @@ library(gt)
 library(flextable)
 library(knitr) 
 library(corrplot)
-#install.packages("modeest")   # solo la primera vez
+
 library(modeest)
-#install.packages("moments")
+
 library(moments)
-#filtar dataset
+
 library(dplyr)
 ```
+
+## -------------------------- PARA DESPUÉS
 
 Modelo lineal simple: area con temperatura
 
@@ -109,36 +105,61 @@ summary(modelo_multiple)
 plot(modelo_multiple)
 ```
 
-```{r}
-#---------- DIVISIÓN CALOR-FRÍO
+## ----------------------------------------
 
-# 1. Variables climáticas (mantenemos tu lógica previa)
+Inicialmente, planteamos repartir las particiones de forma equitativa entre todos los meses del año. Sin embargo, la alta concentración de incendios en verano descompensaba los datos. Para corregir este sesgo y optimizar el proceso, decidimos agrupar los meses en dos bloques estacionales: frío y calor. De esta manera, pudimos generar los conjuntos de entrenamiento, validación y prueba de forma aleatoria y mucho más eficiente.
+
+##### DIVISIÓN CALOR-FRÍO:
+
+```{r}
+#-- Creamos ambos vectores.
+
 calor <- c("jun", "jul", "aug", "sep")
 frio  <- c("jan", "feb", "mar", "apr", "may", "oct", "nov", "dec")
+
+#--- DESPUÉS SE BORRA:
+
+# --- datos$meses_calor mira la columna original de los meses (datos$month). Si el mes está en tu lista de "calor", le pone un 1. Si no, le pone un 0. Así, convertimos una variable categórica en dos variables numéricas binarias.
 
 datos$meses_calor <- ifelse(datos$month %in% calor, 1, 0)
 datos$meses_frio  <- ifelse(datos$month %in% frio, 1, 0)
 
+#--- DESPUÉS SE BORRA:
+
+#-- el operador %in% es una herramienta muy útil que sirve para verificar si un elemento (o varios) pertenece a un grupo o lista. El operador compara cada elemento del lado izquierdo con todos los elementos del lado derecho. El resultado es siempre un valor lógico: TRUE (sí está) o FALSE (no está).
+
 View(datos)
 ```
 
+##### PARTICIONES (TRAIN, TEST Y VALIDACIÓN):
+
 ```{r}
 
-#DIVISION TRAIN TEST VALIDACIÓN
-# 2. Configuración de aleatoriedad
-set.seed(2138)
-n <- nrow(datos)
-indices_disponibles <- 1:n
+set.seed(2138) #--- semilla
+n <- nrow(datos) #-- n = número de filas 
+indices_disponibles <- 1:n # índices disponibles = número de filas.
 
-# 3. Extracción secuencial (Garantiza que no se repitan)
+# Buscamos que los datos no se repitan
+
 # Extraemos el 50% para Train
+
+# BORRAR DESPUÉS
+# sample: Eliges al azar el 50% de los números de la tómbola. Estas filas serán para entrenar el modelo.
 indices_train <- sample(indices_disponibles, size = floor(0.50 * n))
 
 # Quitamos los de Train de la lista de disponibles
+
+# BORRAR DESPUÉS
+# setdiff: Esta función es clave. Significa "diferencia de conjuntos". Básicamente dice: "Toma todos los números originales y quita los que ya elegimos para Train". Así garantizas que no haya datos repetidos en los siguientes pasos.
 indices_restantes <- setdiff(indices_disponibles, indices_train)
 
 # De lo que sobra, extraemos el 25% del total para Test
 # (Equivale al 50% de los restantes)
+
+# BORRAR DESPUÉS
+# De los números que sobraron (indices_restantes), sacas otro 25% del total original para el Test.
+#Lo que queda al final de todo el proceso (el último setdiff) se asigna automáticamente a Validación.
+
 indices_test <- sample(indices_restantes, size = floor(0.25 * n))
 
 # Validación es lo que queda después de quitar Train y Test
@@ -149,11 +170,11 @@ datos.train <- datos[indices_train, ]
 datos.test  <- datos[indices_test, ]
 datos.valid <- datos[indices_valid, ]
 View(datos.train)
-dim(datos.test) #129 columnas
+dim(datos.test) #129 filas
 View(datos.test)
-dim(datos.train) #258 columnas
+dim(datos.train) #258 filas
 View(datos.valid)
-dim(datos.valid) #130 columnas
+dim(datos.valid) #130 filas
 ```
 
 ```{r, fig.width=12, fig.height=6, dpi=300}
@@ -238,53 +259,112 @@ grafico_isi <- ggplot(data = datos.train, aes(x = ISI)) +
   
 ```
 
-```{r}
-ggplot(datos.train, aes(x = DMC)) +
-geom_density() +
-ggtitle('KDE')
-```
+#### Análisis de la variable numérica 'temp':
 
 ```{r}
-ggplot(datos.train, aes(x = DC)) +
-geom_density() +
-ggtitle('KDE')
+# Configurar el espacio para ver 2 gráficos (Histograma y Boxplot)
+par(mfrow=c(1, 2))
+
+# Histograma de Temperatura
+hist(datos.train$temp, 
+     main="Distribución de la Temperatura", 
+     xlab="Temperatura (ºC)", 
+     col="orange", 
+     border="white",
+     breaks=20)
+
+# Boxplot de Temperatura
+boxplot(datos.train$temp, 
+        main="Caja y Bigotes de Temp", 
+        ylab="Grados Celsius (ºC)", 
+        col="gold")
+
+# Comparativa Calor vs Frío
+# Esto sirve para ver si la división tiene sentido
+par(mfrow=c(1, 1)) # Volvemos a un solo gráfico
+boxplot(temp ~ meses_calor, data=datos.train,
+        main="Temperatura: Meses de Frío (0) vs Calor (1)",
+        xlab="Categoría (1 = Calor)",
+        ylab="Temperatura (ºC)",
+        col=c("lightblue", "tomato"))
 ```
+
+**Distribución:** Observando el histograma, vemos que la temperatura sigue una distribución muy parecida a la "normal" (forma de campana), algo que ayudará al modelo en el aprendizaje. La mayoría de los incendios se concentran entre los 16°C y los 22°C, con picos de entre 33 y 42 eventos por intervalo. Por el contrario, hay muy pocos registros por debajo de los 5°C o por encima de los 30°C. Esto último puede parecer extraño, pero tiene sentido: simplemente hay menos días al año con calor tan extremo y, además, en esas fechas se extrema la prevención. No obstante, aunque sean pocos casos, esos días de calor intenso son los que suelen dejar las mayores superficies quemadas.
+
+**Boxplot:** El diagrama de caja nos muestra que la mediana está en los 19°C; es decir, la mitad de los incendios ocurrieron por encima de esa temperatura y la otra mitad por debajo. La mayor concentración de incendios ocurren en un rango de entre 16°C y 23°C. También aparecen algunos valores atípicos: incendios en días inusualmente fríos (menos de 5°C) y un caso extremo que roza los 34°C.
+
+**Comparativa entre meses de frío y calor:** Este gráfico confirma que dividir los datos por temporadas fue una buena decisión. Se ve una separación muy clara entre las temperaturas típicas de los meses fríos (\~13°C) y los cálidos (\~21°C). Mientras que en invierno los incendios suelen ocurrir entre los 9°C y 16°C, en verano el rango sube a los 18-24°C, dándole al modelo un contexto térmico muy bien definido. Por último, en la etapa de calor destacan algunos valores atípicos: uno por encima de los 33°C (momento crítico para la propagación) y otro sorprendentemente bajo, por debajo de los 10°C.
+
+#### Análisis de la variable numérica 'RH':
 
 ```{r}
-ggplot(data = datos.train) +
-  geom_histogram(mapping = aes(x = ISI), binwidth = 5)
+par(mfrow=c(1, 2))
+
+# Histograma de RH (Humedad Relativa)
+hist(datos.train$RH, 
+     main="Distribución de RH", 
+     xlab="Humedad Relativa (%)", 
+     col="skyblue",     
+     border="white",
+     breaks=20)
+
+# Boxplot de RH
+boxplot(datos.train$RH, 
+        main="Caja y Bigotes de RH", 
+        ylab="Porcentaje (%)", 
+        col="dodgerblue") 
 ```
+
+**Distribución:** El histograma nos muestra que la humedad relativa tiene un sesgo a la derecha. A diferencia de la temperatura, aquí la mayoría de los incendios ocurren cuando la humedad es baja, concentrándose principalmente entre el 30% y el 50%. Es muy raro ver incendios con humedades superiores al 80%, lo cual tiene sentido, ya que a mayor humedad, el combustible forestal (toda la materia orgánica, viva o muerta, que se encuentra en los terrenos forestales y que tiene la capacidad de arder en un incendio) está menos seco y es más difícil que arda.
+
+**Boxplot:** En el diagrama de caja vemos que la mediana se sitúa en torno al 42%. Esto nos dice que la mitad de los incendios analizados ocurrieron en condiciones de aire bastante seco. La zona de mayor concentración de incendios se mueve en un rango de entre el 33% y el 53% de humedad.
+
+**Valores atípicos (Outliers):** Lo más llamativo de este gráfico son los puntos que aparecen en la parte superior, por encima del 80% y llegando incluso al 100%. Estos son casos atípicos donde hubo incendios a pesar de que la humedad era máxima. Esto podría deberse a otros factores que compensaron la humedad, como vientos muy fuertes o una sequía acumulada en el suelo que el aire húmedo no pudo aliviar.
+
+#### Análisis de la variable numérica 'wind':
 
 ```{r}
-ggplot(data = datos.train) +
-  geom_histogram(mapping = aes(x = temp), binwidth = 5)
+par(mfrow=c(1, 2))
+
+# Histograma 
+hist(datos.train$wind, 
+     main="Distribución de 'wind'", 
+     xlab="Velocidad del aire (km/h)", 
+     col="skyblue",     
+     border="white",
+     breaks=20)
+
+# Boxplot
+boxplot(datos.train$wind, 
+        main="Caja y Bigotes de 'wind'", 
+        ylab="Km/h", 
+        col="dodgerblue") 
 ```
+
+**Distribución:** En el histograma observamos que la mayor concentración de incendios ocurre con vientos que oscilan entre los 3,5 km/h y 4 km/h. Por el contrario, los eventos con vientos muy suaves (por debajo de 2 km/h) o rachas más fuertes (por encima de 7 km/h) presentan una frecuencia de incendios mucho menor. Esto indica que la mayoría de los eventos registrados se dieron bajo condiciones de viento moderado.
+
+**Boxplot:** El diagrama de caja confirma que no existen valores atípicos en esta variable, lo que significa que todas las velocidades registradas entran dentro del rango esperado. La zona de mayor concentración de incendios se sitúa entre los 2,3 km/h y los 5,5 km/h aproximadamente. Por otro lado, la mediana se ubica en los 4 km/h, lo que indica que la mitad de los incendios ocurrieron con vientos inferiores a esa velocidad y la otra mitad con vientos superiores.
+
+#### Análisis de la variable numérica 'rain':
 
 ```{r}
-ggplot(data = datos.train) +
-  geom_histogram(mapping = aes(x = wind), binwidth = 5)
+par(mfrow=c(1, 2))
+
+# Histograma  
+hist(datos.train$rain, 
+     main="Distribución de 'rain'", 
+     xlab="LLuvia caída por mm/m²", 
+     col="skyblue",     
+     border="white",
+     breaks=20)
+
+# Boxplot 
+boxplot(datos.train$rain, 
+        main="Caja y Bigotes de 'rain'", 
+        ylab="mm/m²", 
+        col="dodgerblue") 
 ```
 
-```{r}
-ggplot(datos.train, aes(x = rain)) +
-geom_density() +
-ggtitle('KDE')
+**Distribución:** El histograma nos muestra una distribución con un sesgo extremo hacia la derecha. Como es de esperar en registros de incendios forestales, la gran mayoría de las observaciones se sitúan en el valor 0, lo que confirma la ausencia de lluvias en el momento de los incendios. No obstante, se identifican tres casos aislados con registros positivos, aunque presentan valores muy bajos en comparación con el volumen total de la muestra.
 
-```
-
-```{r}
-ggplot(data = datos.train) +
-  geom_histogram(mapping = aes(x = area), binwidth = 60)
-```
-
-CATEGÓRICAS
-
-```{r}
-ggplot(data = datos.train) +
-  geom_bar(mapping = aes(x = meses_calor))
-```
-
-```{r}
-ggplot(data = datos.train) +
-  geom_bar(mapping = aes(x = meses_frio))
-```
+**Boxplot:** El diagrama de caja ratifica esta falta de variabilidad: la estructura de la caja aparece colapsada sobre el cero, dado que la mediana y los cuartiles coinciden en ese valor. Se detectan tres valores atípicos que corresponden a eventos específicos con precipitaciones bajas de aproximadamente 0.8, 1.0 y 1.4 mm/m².
