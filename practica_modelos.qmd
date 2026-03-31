@@ -18,7 +18,7 @@ Dataset: <https://archive.ics.uci.edu/dataset/162/forest+fires>
 
 Los incendios forestales representan un problema medioambiental crítico, ya que generan severos daños económicos y ecológicos, además de poner en peligro vidas humanas. En este contexto, la detección temprana y la capacidad de predicción son elementos clave para mitigar y controlar este tipo de fenómenos. Los datos analizados fueron recolectados en el Parque Natural de Montesinho, ubicado en Portugal, donde para cada registro de incendio se capturaron las condiciones climáticas mediante una estación meteorológica local en el momento exacto en que se detectó el incidente.
 
-El objetivo principal de este análisis es predecir la variable area, la cual expresa la superficie total quemada en hectáreas; es importante notar que esta variable suele presentar muchos valores cercanos a cero, lo que indica incendios que fueron controlados rápidamente antes de expandirse.
+El objetivo principal de este análisis es predecir la variable area, la cual expresa la superficie total quemada en hectáreas; es importante notar que esta variable suele presentar muchos valores cercanos a cero, lo que indica incendios que fueron controlados rápidamente antes de expandirse. Cabe destacar que el conjunto de datos no presenta valores faltantes.
 
 ------------------------------------------------------------------------
 
@@ -56,6 +56,8 @@ El objetivo principal de este análisis es predecir la variable area, la cual ex
 # 2. PREPARACIÓN DE DATOS
 
 #### Abrimos el dataset:
+
+Observamos que esta muestra posee 517 filas y 13 columnas.
 
 ```{r}
 datos <- read.csv("forestfires.csv")
@@ -176,6 +178,10 @@ dim(datos.train) #258 filas
 View(datos.valid)
 dim(datos.valid) #130 filas
 ```
+
+# 3. ANÁLISIS EXPLORATORIO DE DATOS
+
+## ANÁLISIS UNIVARIANTE
 
 ```{r, fig.width=12, fig.height=6, dpi=300}
 p1 <- ggplot(data = datos.train, aes(x = X)) +
@@ -373,7 +379,7 @@ boxplot(datos.train$rain,
 
 ```{r}
 
-hist(datos$area, 
+hist(datos.train$area, 
      breaks = 100, 
      main = "Distribución del Área Quemada", 
      col = "orange", 
@@ -381,19 +387,55 @@ hist(datos$area,
      ylab = "Frecuencia")
 ```
 
-**Distribución**: La distribución de los incendios está sesgada a la derecha, lo que significa que la gran mayoría de los incendios son de tamaño muy pequeño, mientras que solo unos pocos alcanzan grandes dimensiones. Aunque estos incendios grandes son poco frecuentes, tienen un impacto importante porque elevan la media, haciendo que no represente bien el caso típico. Además, esta diferencia entre muchos casos pequeños y pocos casos extremos hace que sea difícil predecir cuándo ocurrirá un incendio de gran magnitud.
+**Distribución**: La distribución de los incendios está sesgada a la derecha, lo que indica que la mayoría de los incendios tienen un tamaño muy reducido, mientras que solo unos pocos alcanzan grandes dimensiones. Aunque estos incendios de gran tamaño son poco frecuentes, tienen un impacto significativo, ya que elevan la media y hacen que esta no represente adecuadamente el caso típico. Además, esta asimetría, caracterizada por muchos valores pequeños y unos pocos valores extremos, dificulta la predicción de incendios de gran magnitud. Por ello, resulta recomendable aplicar una transformación logarítmica a esta variable.
+
+**Transformación de la variable 'area'**
+
+Se realiza una transformación logarítmica, concretamente log(x+1), debido a la asimetría observada previamente en la variable. Este tipo de transformación se aplica a variables que presentan muchos valores pequeños y unos pocos valores muy elevados, los cuales sesgan los resultados del modelo. Con ello, se consigue una mejor separación de los valores pequeños y una reducción del impacto de los valores extremos.
+
+```{r}
+datos.train$area_log <- log1p(datos.train$area)
+```
+
+Comparamos ambas gráficas:
+
+```{r}
+library(ggplot2)
+
+# Antes
+ggplot(datos.train, aes(x = area)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  labs(title = "Área quemada (original)",
+       x = "Área (ha)",
+       y = "Frecuencia") +
+  theme_minimal()
+
+# Después
+ggplot(datos.train, aes(x = area_log)) +
+  geom_histogram(bins = 30, fill = "seagreen", color = "white") +
+  labs(title = "Área quemada (log)",
+       x = "log(area + 1)",
+       y = "Frecuencia") +
+  theme_minimal()
+```
+
+La variable 'area' presenta una fuerte asimetría positiva, con muchos valores cercanos a cero y algunos valores extremos elevados. Tras aplicar la transformación logarítmica, la distribución se vuelve más equilibrada, reduciendo el impacto de los valores atípicos y facilitando el análisis.
 
 #### Análisis de la variable categórica 'month':
 
 ```{r}
-ggplot(datos, aes(x = month, y = area, fill = month)) +
-  geom_bar(stat = "summary", fun = "mean") +
-  labs(title = "Promedio de Hectáreas Quemadas por Mes",
-       x = "Mes", y = "Media de Área (ha)") +
-  theme_classic()
+# geom_bar(): Crea un gráfico de barras: Cuenta cuántas observaciones hay en cada categoría
+# x = month : Cada barra representa un mes. La variable month va en el eje X.
+# fill = month : Cada mes tendrá un color distinto
+
+ggplot(datos.train, aes(x = month, fill = month)) +
+  geom_bar() +
+  labs(title = "Frecuencia de incendios por mes",
+       x = "Mes", y = "Frecuencia") +
+  theme_classic() #cambia el estilo del gráfico
 ```
 
-**Distribución**: La gráfica de promedios revela que la peligrosidad de un incendio no depende solo de la cantidad de fuegos que haya(frecuencia), sino de la capacidad de propagación. Mayo y Septiembre son los meses donde, estadísticamente, un incendio tiene más probabilidades de convertirse en un evento de gran magnitud.
+**Distribución**: El gráfico muestra que la mayor parte de los incendios se concentran en los meses de agosto y septiembre, lo que sugiere una clara estacionalidad en su ocurrencia. Este patrón es coherente con las condiciones climáticas típicas de estos meses, caracterizadas por temperaturas más elevadas y menores precipitaciones, lo que favorece la propagación del fuego. Por el contrario, en los meses con mayores precipitaciones, como abril, mayo y octubre, así como en aquellos con temperaturas más bajas, como enero, diciembre y noviembre, se observa una menor o nula frecuencia de incendios.
 
 #### Análisis de la variable categórica 'day':
 
@@ -402,11 +444,11 @@ ggplot(datos, aes(x = month, y = area, fill = month)) +
 niveles_dias <- c("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 
 # 2. Convertir a factor ordenado
-datos$day <- factor(datos$day, levels = niveles_dias)
+datos.train$day <- factor(datos.train$day, levels = niveles_dias)
 
 library(ggplot2)
 
-ggplot(datos, aes(x = day, fill = day)) +
+ggplot(datos.train, aes(x = day, fill = day)) +
   geom_bar(color = "white") +
   # Usamos una paleta de colores llamativa
   scale_fill_brewer(palette = "Set3", guide = "none") + 
@@ -416,77 +458,121 @@ ggplot(datos, aes(x = day, fill = day)) +
   theme_minimal()
 ```
 
-**Distribucion**: La gráfica muestra que la cantidad de incendios cambia según el día de la semana. Se observa que los valores más altos aparaecen el viernes, sábado y sobre todo, el domingo, lo que indica que durante el fin de semana hay más incedios. Esto probablemente se debe a que hay más personas realizando actividades al aire libre, lo que aumenta el riesgo de que se inicien fuegos de forma accidental.
+**Distribucion**: La gráfica muestra que la cantidad de incendios cambia según el día de la semana. Se observa que los valores más altos aparecen el jueves, viernes, sábado y sobre todo, el domingo, lo que indica que durante el fin de semana hay más incedios. Esto probablemente se debe a que hay más personas realizando actividades al aire libre, lo que aumenta el riesgo de que se inicien fuegos de forma accidental.
 
-**Preguntas**:
+## ANÁLISIS BIVARIANTE
+
+#### Relación entre el mes y el área quemada (escala logarítmica).
+
+```{r}
+ggplot(datos.train, aes(x = month, y = area_log, fill = month)) +
+  geom_bar(stat = "summary", fun = "mean") +
+  labs(title = "Área quemada promedio por mes (escala logarítmica)",
+       x = "Mes",
+       y = "Media de log(area + 1)") +
+  theme_classic()
+```
+
+**Distribución**: La gráfica de promedios revela que la peligrosidad de un incendio no depende solo de la cantidad de fuegos que haya (frecuencia), sino de la capacidad de propagación. Mayo y diciembre son los meses donde, estadísticamente, un incendio tiene más probabilidades de convertirse en un evento de gran magnitud.
+
+#### Relación entre la temperatura y el área quemada (escala logarítmica).
+
+#### Relación entre la humedad relativa y el área quemada (escala logarítmica).
+
+#### Relación entre la lluvia y el área quemada (escala logarítmica).
+
+#### Relación entre la velocidad del viento y el área quemada (escala logarítmica).
+
+#### Relación entre FFMC y el área quemada (escala logarítmica).
+
+#### Relación entre DMC y el área quemada (escala logarítmica).
+
+#### Relación entre DC y el área quemada (escala logarítmica).
+
+#### Relación entre ISI y el área quemada (escala logarítmica).
+
+#### Relación entre la temperatura y la húmedad relativa.
+
+#### Relación entre la velocidad del viento e ISI.
+
+#### Relación entre DMC Y DC.
+
+## ANÁLISIS MULTIVARIANTE
+
+#### Relación entre los ejes X e Y y el área quemada (escala logarítmica).
+
+#### Relación entre la temperatura, el área quemada (escala logarítmica) e ISI.
+
+### PREGUNTAS: CONTINUAR. LAS PREGUNTAS VAN DESPUES DEL ANÁLISIS. ENTRE 3 A 5 PREGUNTAS ESTÁ BIEN.
 
 **1. ¿Cómo influyen las variables meteorológicas e índices de combustible en el área quemada (area)?**
 
 ```{r}
 # Seleccionamos solo las variables numéricas para la matriz
-vars_num <- datos[, c("FFMC", "DMC", "DC", "ISI", "temp", "RH", "wind", "rain", "area")]
+vars_num <- datos.train[, c("FFMC", "DMC", "DC", "ISI", "temp", "RH", "wind", "rain", "area_log")]
 
 # Calculamos la correlación
 tabla_cor <- cor(vars_num)
 
 # Vemos específicamente qué tanto influye cada cosa en el área
-print(tabla_cor[,"area"])
+print(tabla_cor[,"area_log"])
 
 
 ```
 
-**Intepretación**: La temperatura es el factor más importante: cuando aumenta, los incendios suelen ser más grandes. La humedad actúa al contrario, ya que cuanto mayor es, más difícil es que el fuego se propague. También influye mucho la sequía acumulada del suelo, que facilita que el incendio crezca y sea más difícil de apagar. En cambio, el viento tiene poca influencia en este caso, y la lluvia casi no aparece en los datos.
-
-Aunque las correlaciones son bajas, esto es normal porque hay muchos incendios muy pequeños (valores cercanos a 0), lo que reduce los resultados. Además, los incendios no crecen de forma lineal, sino cuando se combinan varias condiciones extremas.
+**Intepretación**:
 
 **2. ¿Dónde ocurren los incendios más devastadores y qué zonas del parque son las más vulnerables?**
 
 ```{r}
-ggplot(datos, aes(x = X, y = Y)) +
-  stat_summary_2d(aes(z = area), fun = mean, bins = 9) +
+ggplot(datos.train, aes(x = X, y = Y)) +
+  stat_summary_2d(aes(z = area_log), fun = mean, bins = 9) +
   scale_fill_gradient(low = "orange", high = "red") +
-  labs(title = "Mapa de Intensidad del Parque",
-       subtitle = "Promedio de hectáreas quemadas por sector",
-       fill = "Área Promedio") +
+  labs(title = "Mapa de intensidad del parque",
+       subtitle = "Promedio del área quemada por sector (escala logarítmica)",
+       x = "X",
+       y = "Y",
+       fill = "Media de log(area + 1)") +
   theme_bw()
 ```
 
-**Interpretación**: El mapa de intensidad muestra que el riesgo de incendios no es igual en todo el parque. Se identifica un punto crítico en el noreste, en las coordenadas (8,8), donde los incendios alcanzan tamaños mucho mayores, superando las 150 hectáreas. Esto indica que, bajo las mismas condiciones climáticas, esa zona es más vulnerable y propensa a incendios graves. En cambio, la mayor parte del parque presenta incendios pequeños, lo que permite concentrar los recursos de prevención en las áreas más peligrosas.
+**Interpretación**:
 
 **3. ¿Qué es peor: que el suelo profundo esté seco o que las hojas de arriba estén secas?**Comparando el Suelo Seco (DMC) vs El Pasto Seco (FFMC)
 
 ```{r}
-# Usamos patchwork para poner dos gráficos juntos
 library(patchwork)
 
-p1 <- ggplot(datos, aes(x = FFMC, y = area)) + 
+p1 <- ggplot(datos.train, aes(x = FFMC, y = area_log)) + 
   geom_jitter(color = "orange", alpha = 0.4) + 
-  labs(title = "Humedad Superficial (Hojas/Pasto)")
+  labs(title = "Humedad superficial (FFMC)",
+       x = "FFMC",
+       y = "log(area + 1)") +
+  theme_minimal()
 
-p2 <- ggplot(datos, aes(x = DMC, y = area)) + 
+p2 <- ggplot(datos.train, aes(x = DMC, y = area_log)) + 
   geom_jitter(color = "brown", alpha = 0.4) + 
-  labs(title = "Humedad Profunda (Humus/Troncos)")
+  labs(title = "Humedad profunda (DMC)",
+       x = "DMC",
+       y = "log(area + 1)") +
+  theme_minimal()
 
 p1 + p2
 ```
 
-**Interpretación**: Los gráficos muestran que la humedad superficial (FFMC) actúa como un “interruptor”: cuando las hojas están muy secas, es fácil que el fuego comience. En cambio, la humedad profunda (DMC) indica qué tan grande puede llegar a ser el incendio. Si el suelo está seco, el fuego dura más y se vuelve más difícil de apagar.
-
-Por tanto, el FFMC es clave para la ignición, mientras que el DMC es más importante para la magnitud del incendio. De hecho, el DMC tiene mayor relación con el área quemada.
+**Interpretación**:
 
 4\.
 
 ```{r}
-library(ggplot2)
-
-ggplot(datos, aes(x = temp, y = area)) +
-  geom_point(aes(color = ISI), alpha = 0.5) + # El color indica la velocidad de propagación
-  geom_smooth(method = "loess", color = "red") + # Una línea que marca la tendencia
-  labs(title = "Relación entre Temperatura y Área Quemada",
+ggplot(datos.train, aes(x = temp, y = area_log)) +
+  geom_point(aes(color = ISI), alpha = 0.5) +
+  geom_smooth(method = "loess", color = "red") +
+  labs(title = "Relación entre temperatura y área quemada",
        subtitle = "El color indica el índice de propagación (ISI)",
        x = "Temperatura (°C)",
-       y = "Hectáreas") +
+       y = "log(area + 1)") +
   theme_minimal()
 ```
 
-**Interpetación**: El análisis visual y estadístico identifica los 25°C como el umbral de alerta crítica. Por debajo de esta temperatura, la capacidad de control del parque es alta (incendios mínimos). Por encima, entramos en una zona de riesgo extremo donde han ocurrido todos los grandes incendios registrados en el histórico de Montesinho.
+**Interpetación**:
