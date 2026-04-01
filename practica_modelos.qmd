@@ -70,7 +70,6 @@ head(datos)
 #### Cargamos las librerías:
 
 ```{r}
-
 library(ggplot2)
 library(patchwork)
 library(tidyverse)
@@ -80,11 +79,8 @@ library(gt)
 library(flextable)
 library(knitr) 
 library(corrplot)
-
 library(modeest)
-
 library(moments)
-
 library(dplyr)
 ```
 
@@ -359,7 +355,7 @@ par(mfrow=c(1, 2))
 # Histograma  
 hist(datos.train$rain, 
      main="Distribución de 'rain'", 
-     xlab="LLuvia caída por mm/m²", 
+     xlab="Lluvia (mm/m²)", 
      col="skyblue",     
      border="white",
      breaks=20)
@@ -477,9 +473,57 @@ ggplot(datos.train, aes(x = month, y = area_log, fill = month)) +
 
 #### Relación entre la temperatura y el área quemada (escala logarítmica).
 
-#### Relación entre la humedad relativa y el área quemada (escala logarítmica).
+```{r}
+library(ggplot2)
+
+ggplot(datos.train, aes(x = temp, y = area_log)) +
+  geom_point(color = "steelblue", alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Relación entre la temperatura y el área quemada (escala logarítmica)",
+       x = "Temperatura (°C)",
+       y = "log(area + 1)") +
+  theme_minimal()
+```
+
+El gráfico muestra una ligera relación positiva entre la temperatura y el área quemada (en escala logarítmica), lo que sugiere que, a medida que aumenta la temperatura, los incendios tienden a ser ligeramente más grandes. Este comportamiento es coherente con el hecho de que temperaturas más altas favorecen la sequedad de la vegetación y la propagación del fuego.
+
+Sin embargo, la dispersión de los datos es elevada y no se observa un patrón claro, lo que indica que la temperatura por sí sola no explica el tamaño de los incendios. Además, se aprecia una alta concentración de valores cercanos a cero en el área quemada, reflejando la presencia de numerosos incendios de pequeña magnitud.
+
+#### Relación entre la húmedad relativa y el área quemada (escala logarítmica).
+
+```{r}
+library(ggplot2)
+
+ggplot(datos.train, aes(x = RH, y = area_log)) +
+  geom_point(color = "steelblue", alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Relación entre la húmedad relativa y el área quemada (escala logarítmica)",
+       x = "Humedad (%)",
+       y = "log(area + 1)") +
+  theme_minimal()
+```
+
+El gráfico muestra una relación negativa débil entre la humedad relativa (RH) y el área quemada (en escala logarítmica). A medida que aumenta la humedad, el área quemada tiende a disminuir ligeramente, lo cual es coherente con el hecho de que mayores niveles de humedad dificultan la propagación del fuego.
+
+Sin embargo, la dispersión de los datos es elevada y no se observa un patrón claro, lo que indica que la humedad por sí sola no explica el tamaño de los incendios. Además, se observa una alta concentración de valores cercanos a cero en el área quemada, lo que refleja la presencia de numerosos incendios de pequeña magnitud.
 
 #### Relación entre la lluvia y el área quemada (escala logarítmica).
+
+```{r}
+library(ggplot2)
+
+ggplot(datos.train, aes(x = rain, y = area_log)) +
+  geom_point(color = "steelblue", alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Relación entre la lluvia y el área quemada (escala logarítmica)",
+       x = "Lluvia (mm/m²)",
+       y = "log(area + 1)") +
+  theme_minimal()
+```
+
+El gráfico muestra una alta concentración de observaciones en valores de lluvia iguales a cero, lo que indica que la mayoría de los incendios ocurren en ausencia de precipitaciones. La dispersión de los datos es elevada y no se observa un patrón claro entre la lluvia y el área quemada.
+
+La línea de tendencia presenta una ligera pendiente negativa, lo que podría sugerir que, a mayor cantidad de lluvia, el área quemada tiende a disminuir. Sin embargo, esta relación es muy débil y poco representativa debido a la escasa variabilidad de la variable rain y al predominio de valores nulos.
 
 #### Relación entre la velocidad del viento y el área quemada (escala logarítmica).
 
