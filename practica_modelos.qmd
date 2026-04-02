@@ -84,27 +84,6 @@ library(moments)
 library(dplyr)
 ```
 
-## -------------------------- PARA DESPUÉS
-
-Modelo lineal simple: area con temperatura
-
-```{r}
-datos$log_area <- log(datos$area + 1)
-modelo_simple <- lm(log_area ~ temp, data = datos)
-summary(modelo_simple)
-```
-
-Modelo lineal múltiple: area con temperatura,viento,humedad
-
-```{r}
-datos$log_area <- log(datos$area + 1)
-modelo_multiple <- lm(log_area ~ temp + wind + RH, data = datos)
-summary(modelo_multiple)
-plot(modelo_multiple)
-```
-
-## ----------------------------------------
-
 Inicialmente, planteamos repartir las particiones de forma equitativa entre todos los meses del año. Sin embargo, la alta concentración de incendios en verano descompensaba los datos. Para corregir este sesgo y optimizar el proceso, decidimos agrupar los meses en dos bloques estacionales: frío y calor. De esta manera, pudimos generar los conjuntos de entrenamiento, validación y prueba de forma aleatoria y mucho más eficiente.
 
 ##### DIVISIÓN CALOR-FRÍO:
@@ -476,7 +455,6 @@ ggplot(datos.train, aes(x = month, y = area_log, fill = month)) +
 
 ```{r}
 library(ggplot2)
-datos$log_area <- log(datos$area + 1)
 
 ggplot(datos.train, aes(x = temp, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
@@ -664,6 +642,61 @@ ggplot(datos.train, aes(x = factor(X), y = factor(Y), fill = area_log)) +
 ```
 
 #### Relación entre la temperatura, el área quemada (escala logarítmica) e ISI.
+
+```{r}
+datos.train$ISI_cat <- cut(datos.train$ISI, breaks = 3)
+
+ggplot(datos.train, aes(x = temp, y = area_log)) +
+  geom_point(alpha = 0.5, color = "steelblue") +
+  facet_wrap(~ ISI_cat) +
+  labs(title = "Temperatura vs área según niveles de ISI",
+       x = "Temperatura (°C)",
+       y = "log(area + 1)") +
+  theme_minimal()
+```
+
+**Interpretación:** En el primer grupo (niveles bajos de ISI) se observa que la mayor parte de los incendios ocurren bajo condiciones de baja velocidad de propagación. Además, existe una alta concentración de valores de área quemada iguales o cercanos a cero, lo que indica que la mayoría de los incendios son de pequeña magnitud. En este grupo, la temperatura presenta una amplia variabilidad, pero no se observa una relación clara con el área quemada, lo que sugiere que, por sí sola, no determina el tamaño de los incendios.
+
+No obstante, también se observan algunos incendios de gran tamaño incluso con valores bajos de ISI. Por ejemplo, una observación alcanza un valor de log(area + 1) = 7, lo que equivale aproximadamente a e\^7−1 ≈ 1095 hectáreas, evidenciando que pueden darse incendios grandes incluso cuando la propagación estimada es baja.
+
+En los niveles medios y altos de ISI hay menos observaciones, lo que dificulta extraer conclusiones sólidas. Además, tampoco se aprecia un patrón claro entre la temperatura y el área quemada en estos niveles, ni una relación evidente que indique que un mayor ISI esté asociado a incendios de mayor tamaño.
+
+En conjunto, estos resultados sugieren que, aunque el ISI está relacionado con la capacidad de propagación del fuego, ni este índice ni la temperatura explican por sí solos el área quemada, y su efecto parece estar condicionado por otros factores.
+
+#### Matriz de correlación
+
+```{r}
+vars_num <- datos.train[, c("FFMC", "DMC", "DC", "ISI", 
+                           "temp", "RH", "wind", "rain", "area_log")]
+
+cor(vars_num)
+```
+#### Heatmap de correlación
+
+```{r}
+library(ggplot2)
+library(reshape2)
+
+# Seleccionar variables numéricas
+vars_num <- datos.train[, c("FFMC", "DMC", "DC", "ISI", 
+                           "temp", "RH", "wind", "rain", "area_log")]
+
+# Calcular matriz de correlación
+matriz_cor <- cor(vars_num)
+
+# Convertir a formato largo
+matriz_long <- melt(matriz_cor)
+
+# Heatmap
+ggplot(matriz_long, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient2(low = "blue", high = "red", mid = "white", midpoint = 0) +
+  labs(title = "Matriz de correlación",
+       x = "",
+       y = "",
+       fill = "Correlación") +
+  theme_minimal()
+```
 
 ### PREGUNTAS: CONTINUAR. LAS PREGUNTAS VAN DESPUES DEL ANÁLISIS. ENTRE 3 A 5 PREGUNTAS ESTÁ BIEN.
 
