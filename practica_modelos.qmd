@@ -461,6 +461,7 @@ ggplot(datos.train, aes(x = day, fill = day)) +
 #### Relación entre el mes y el área quemada (escala logarítmica).
 
 ```{r}
+
 ggplot(datos.train, aes(x = month, y = area_log, fill = month)) +
   geom_bar(stat = "summary", fun = "mean") +
   labs(title = "Área quemada promedio por mes (escala logarítmica)",
@@ -475,6 +476,7 @@ ggplot(datos.train, aes(x = month, y = area_log, fill = month)) +
 
 ```{r}
 library(ggplot2)
+datos$log_area <- log(datos$area + 1)
 
 ggplot(datos.train, aes(x = temp, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
@@ -499,7 +501,7 @@ ggplot(datos.train, aes(x = RH, y = area_log)) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
   labs(title = "Relación entre la húmedad relativa y el área quemada (escala logarítmica)",
        x = "Humedad (%)",
-       y = "log(area + 1)") +
+       y = "area") +
   theme_minimal()
 ```
 
@@ -528,7 +530,8 @@ La línea de tendencia presenta una ligera pendiente negativa, lo que podría su
 #### Relación entre la velocidad del viento y el área quemada (escala logarítmica).
 
 ```{r}
-ggplot(datos.train, aes(x = wind, y = log_area)) +
+library(ggplot2)
+ggplot(datos.train, aes(x = wind, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
   labs(title = "Relación entre FFMC y el área quemada (escala logarítmica)",
@@ -540,7 +543,10 @@ ggplot(datos.train, aes(x = wind, y = log_area)) +
 #### Relación entre FFMC y el área quemada (escala logarítmica).
 
 ```{r}
-ggplot(datos.train, aes(x = FFMC, y = log_area)) +
+
+library(ggplot2)
+
+ggplot(datos.train, aes(x = FFMC, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
   labs(title = "Relación entre FFMC y el área quemada (escala logarítmica)",
@@ -556,13 +562,14 @@ La tendencia es positiva: cuanto más seco está el material, mayor puede ser el
 #### Relación entre DMC y el área quemada (escala logarítmica).
 
 ```{r}
-ggplot(datos.train, aes(x = DMC, y = log_area)) +
+library(ggplot2)
+ggplot(datos.train, aes(x = DMC, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +  # Cambié a rojo oscuro para diferenciarlo del FFMC
   geom_smooth(method = "lm", se = FALSE, color = "red") + # Línea de tendencia en azul
   labs(title = "Relación entre DMC y el área quemada (escala logarítmica)",
        subtitle = "DMC mide la humedad en capas de suelo orgánico medio",
        x = "DMC (Duff Moisture Code)",
-       y = "log(area + 1)") +
+       y = "area(escala logarítmica)") +
   theme_minimal()
 ```
 
@@ -573,13 +580,14 @@ Sin embargo, los incendios más grandes suelen aparecer cuando el DMC es alto, l
 #### Relación entre DC y el área quemada (escala logarítmica).
 
 ```{r}
-ggplot(datos.train, aes(x = DC, y = log_area)) +
+library(ggplot2)
+ggplot(datos.train, aes(x = DC, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) + 
   geom_smooth(method = "lm", se = FALSE, color = "red") +
   labs(title = "Relación entre DC y el área quemada (escala logarítmica)",
        subtitle = "DC mide la sequedad profunda y acumulada (combustible pesado)",
        x = "DC (Drought Code)",
-       y = "log(area + 1)") +
+       y = "area") +
   theme_minimal()
 ```
 
@@ -590,7 +598,8 @@ Esto significa que el DC no inicia el fuego, pero sí crea las condiciones para 
 #### Relación entre ISI y el área quemada (escala logarítmica).
 
 ```{r}
-ggplot(datos.train, aes(x = ISI, y = log_area)) +
+library(ggplot2)
+ggplot(datos.train, aes(x = ISI, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) + 
   geom_smooth(method = "lm", se = FALSE, color = "red") +
   labs(title = "Relación entre ISI y el área quemada (escala logarítmica)",
@@ -643,6 +652,17 @@ ggplot(datos.train, aes(x = DMC, y = DC)) +
 
 #### Relación entre los ejes X e Y y el área quemada (escala logarítmica).
 
+```{r}
+ggplot(datos.train, aes(x = factor(X), y = factor(Y), fill = area_log)) +
+  geom_tile() +
+  scale_fill_gradient(low = "yellow", high = "red") +
+  labs(title = "Mapa de Calor: Intensidad del Área Quemada",
+       x = "Coordenada X",
+       y = "Coordenada Y",
+       fill = "area_log") +
+  theme_minimal()
+```
+
 #### Relación entre la temperatura, el área quemada (escala logarítmica) e ISI.
 
 ### PREGUNTAS: CONTINUAR. LAS PREGUNTAS VAN DESPUES DEL ANÁLISIS. ENTRE 3 A 5 PREGUNTAS ESTÁ BIEN.
@@ -676,6 +696,16 @@ ggplot(datos.train, aes(x = X, y = Y)) +
        y = "Y",
        fill = "Media de log(area + 1)") +
   theme_bw()
+
+
+ggplot(datos.train, aes(x = factor(X), y = factor(Y), fill = area_log)) +
+  geom_tile() +
+  scale_fill_gradient(low = "yellow", high = "red") +
+  labs(title = "Mapa de Calor: Intensidad del Área Quemada",
+       x = "Coordenada X",
+       y = "Coordenada Y",
+       fill = "area_log") +
+  theme_minimal()
 ```
 
 **Interpretación**:
