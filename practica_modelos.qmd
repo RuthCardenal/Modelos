@@ -609,9 +609,16 @@ ggplot(datos.train, aes(x = ISI, y = area_log)) +
   theme_minimal()
 ```
 
+La gráfica parece indicar que a mayor ISI, menor área quemada, pero esto es engañoso. Esta tendencia está causada por un valor atípico (outlier) muy extremo que distorsiona la línea de regresión.
+
+Si nos centramos en la mayoría de los datos (ISI entre 0 y 20), los incendios más grandes ocurren con valores moderados de ISI. Esto tiene más sentido, ya que una mayor velocidad de propagación facilita que el fuego crezca.
+
+En resumen, la relación negativa no es real: el ISI sí influye en la propagación, pero el resultado está afectado por pocos datos extremos y por la forma en que se distribuyen los registros.
+
 #### Relación entre la temperatura y la húmedad relativa.
 
 ```{r}
+library(ggplot2)
 ggplot(datos.train, aes(x = temp, y = RH)) +
   geom_point(color = "steelblue", alpha = 0.5) + 
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -621,6 +628,10 @@ ggplot(datos.train, aes(x = temp, y = RH)) +
        y = "Humedad Relativa (%)") +
   theme_minimal()
 ```
+
+La gráfica muestra una relación inversa clara: cuando la temperatura sube, la humedad baja. Esto es lógico, ya que el aire caliente seca más el ambiente.
+
+La zona más peligrosa aparece con temperaturas altas (más de 25°C) y humedad baja, donde es más probable que ocurran incendios grandes. En temperaturas bajas, la humedad varía mucho, por lo que el riesgo es menos predecible. Es decir, la combinación de calor y baja humedad crea las condiciones más favorables para que el fuego se propague.
 
 #### Relación entre la velocidad del viento e ISI.
 
@@ -647,6 +658,12 @@ ggplot(datos.train, aes(x = DMC, y = DC)) +
        y = "DC (Drought Code)") +
   theme_minimal()
 ```
+
+La gráfica muestra que existe una relación positiva: cuando aumenta la velocidad del viento, también aumenta el ISI. Esto tiene sentido, ya que el viento ayuda a que el fuego se propague más rápido.
+
+Sin embargo, hay un valor atípico muy alto que no sigue esta tendencia y puede distorsionar el análisis. Además, para una misma velocidad del viento hay mucha variación en el ISI, lo que indica que no depende solo del viento.
+
+En resumen, el viento actúa como un acelerador del fuego, pero su efecto depende también de otros factores como la sequedad del combustible.
 
 ## ANÁLISIS MULTIVARIANTE
 
