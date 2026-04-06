@@ -1029,7 +1029,7 @@ print(bg_resultado)
 
 **En conclusión:**
 
-El modelo de regresión lineal simple ajustado entre la humedad relativa y el área quemada (en escala logarítmica) no resulta adecuado para explicar la variabilidad de la variable respuesta. Aunque se observa una ligera relación negativa, esta no es estadísticamente significativa y presenta una elevada dispersión. Además, el análisis de residuos muestra indicios de no linealidad y cierta heterocedasticidad, lo que indica que no se cumplen completamente los supuestos del modelo lineal. En consecuencia, la humedad relativa por sí sola no es un buen predictor del área quemada, siendo necesario considerar otros factores o modelos más complejos.
+El modelo de regresión lineal simple no resulta adecuado para explicar la relación entre la humedad relativa y el área quemada. Aunque se observa una ligera tendencia negativa, esta no es significativa y presenta una alta dispersión. Además, el análisis de residuos sugiere la presencia de no linealidad, lo cual se confirma mediante la prueba RESET, que indica una mala especificación del modelo. Por tanto, la relación entre las variables no puede describirse adecuadamente mediante un modelo lineal simple.
 
 ### Entre 'ISI' y 'area_log'
 
