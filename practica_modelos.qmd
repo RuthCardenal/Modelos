@@ -614,6 +614,7 @@ La zona más peligrosa aparece con temperaturas altas (más de 25°C) y humedad 
 #### Relación entre la velocidad del viento e ISI.
 
 ```{r}
+library(ggplot2)
 ggplot(datos.train, aes(x = wind, y = ISI)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -624,9 +625,14 @@ ggplot(datos.train, aes(x = wind, y = ISI)) +
   theme_minimal()
 ```
 
+La gráfica muestra que existe una relación positiva: cuando aumenta la velocidad del viento, también aumenta el ISI. Esto tiene sentido, ya que el viento ayuda a que el fuego se propague más rápido.
+
+Sin embargo, hay un valor atípico muy alto que no sigue esta tendencia y puede distorsionar el análisis. Además, para una misma velocidad del viento hay mucha variación en el ISI, lo que indica que no depende solo del viento.
+
 #### Relación entre DMC Y DC.
 
 ```{r}
+library(ggplot2)
 ggplot(datos.train, aes(x = DMC, y = DC)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -637,11 +643,7 @@ ggplot(datos.train, aes(x = DMC, y = DC)) +
   theme_minimal()
 ```
 
-La gráfica muestra que existe una relación positiva: cuando aumenta la velocidad del viento, también aumenta el ISI. Esto tiene sentido, ya que el viento ayuda a que el fuego se propague más rápido.
-
-Sin embargo, hay un valor atípico muy alto que no sigue esta tendencia y puede distorsionar el análisis. Además, para una misma velocidad del viento hay mucha variación en el ISI, lo que indica que no depende solo del viento.
-
-En resumen, el viento actúa como un acelerador del fuego, pero su efecto depende también de otros factores como la sequedad del combustible.
+La gráfica muestra un patrón en “escalera”, donde el DC se mantiene constante mientras el DMC cambia, lo que indica que el suelo profundo varía muy lentamente frente a cambios más rápidos en el suelo medio. Además, se observan dos grupos claros (valores bajos y muy altos), lo que sugiere que el parque pasa rápidamente de húmedo a muy seco, sin estados intermedios. La línea de tendencia confirma que ambos índices aumentan juntos: cuando uno es alto, el otro también. En conjunto, el DC refleja la sequía acumulada a largo plazo, mientras que el DMC indica el estado más reciente del suelo.
 
 ## ANÁLISIS MULTIVARIANTE
 
@@ -657,6 +659,10 @@ ggplot(datos.train, aes(x = factor(X), y = factor(Y), fill = area_log)) +
        fill = "area_log") +
   theme_minimal()
 ```
+
+El mapa de calor muestra que la ubicación geográfica influye claramente en los incendios, ya que no todas las zonas del parque se comportan igual. Las celdas coloreadas indican dónde hubo incendios, mientras que las zonas en blanco representan lugares sin registros en los datos.
+
+Se identifican áreas más críticas, como las coordenadas (8,8), (1,5) y (9,4), donde los incendios tienden a ser más grandes. En cambio, en la zona central del mapa predominan valores bajos, lo que indica incendios pequeños o controlados rápidamente.
 
 #### Relación entre la temperatura, el área quemada (escala logarítmica) e ISI.
 
@@ -728,89 +734,33 @@ ggplot(matriz_long, aes(x = Var1, y = Var2, fill = value)) +
   theme_minimal()
 ```
 
+Las gráficas muestran cómo interactúan las condiciones que influyen en los incendios. Por un lado, existe una relación negativa clara entre temperatura y humedad: cuando sube la temperatura, la humedad baja, creando condiciones de alto riesgo donde el combustible es más inflamable.
+
+Por otro lado, el viento influye en la propagación del fuego (ISI), ya que a mayor viento, mayor velocidad de expansión, aunque con bastante variabilidad porque intervienen más factores. También destaca un valor extremo que se aleja del resto de datos.
+
+Finalmente, la matriz de correlación confirma que variables como temperatura y sequedad del suelo están muy relacionadas entre sí, pero el tamaño del incendio (area_log) no depende de una sola variable, sino de la combinación de varias.
+
+En conjunto, esto indica que los incendios grandes son fenómenos complejos, donde intervienen múltiples factores al mismo tiempo.
+
 ### PREGUNTAS: CONTINUAR. LAS PREGUNTAS VAN DESPUES DEL ANÁLISIS. ENTRE 3 A 5 PREGUNTAS ESTÁ BIEN.
 
-**1. ¿Cómo influyen las variables meteorológicas e índices de combustible en el área quemada (area)?**
+**¿Cómo afecta la temperatura al riesgo de incendios grandes?**
 
-```{r}
-# Seleccionamos solo las variables numéricas para la matriz
-vars_num <- datos.train[, c("FFMC", "DMC", "DC", "ISI", "temp", "RH", "wind", "rain", "area_log")]
+La mayoría de los incendios ocurren con temperaturas entre 16°C y 22°C, pero los días muy calurosos (más de 30°C) son los que suelen provocar incendios grandes.\
+En invierno, los incendios son más pequeños porque hace frío y la vegetación está más húmeda. En verano, el calor y la sequedad hacen que el fuego se propague más rápido.\
+Es decir, cuanto más calor y seco está el parque, más riesgo hay de incendios grandes.
 
-# Calculamos la correlación
-tabla_cor <- cor(vars_num)
+**¿Cómo influye la velocidad del viento en la propagación inicial del fuego?**
 
-# Vemos específicamente qué tanto influye cada cosa en el área
-print(tabla_cor[,"area_log"])
+Como hemos visto antes, a mayor viento, mayor ISI, lo que significa que el fuego puede propagarse más rápido. Sin embargo, dado que hay muchas variaciones, concluimos que el viento no es el único factor que controla la propagación inicial
 
+**¿Cómo se relaciona la sequedad del suelo a corto y largo plazo?**
 
-```
+La sequedad del suelo a corto y largo plazo está conectada pero se comporta de manera diferente. El DMC refleja la humedad del suelo medio y cambia rápido según las condiciones recientes, mientras que el DC mide la sequía profunda y varía muy lentamente. A pesar de estas diferencias, cuando uno de los índices es alto, el otro también suele serlo, lo que indica que períodos prolongados de sequía afectan tanto la capa superficial como la profunda. Además, el parque tiende a pasar rápidamente de húmedo a muy seco, sin muchos estados intermedios.
 
-**Intepretación**:
+**¿Por qué el tamaño final del incendio (area_log) no se correlaciona fuertemente con ninguna variable?**
 
-**2. ¿Dónde ocurren los incendios más devastadores y qué zonas del parque son las más vulnerables?**
-
-```{r}
-ggplot(datos.train, aes(x = X, y = Y)) +
-  stat_summary_2d(aes(z = area_log), fun = mean, bins = 9) +
-  scale_fill_gradient(low = "orange", high = "red") +
-  labs(title = "Mapa de intensidad del parque",
-       subtitle = "Promedio del área quemada por sector (escala logarítmica)",
-       x = "X",
-       y = "Y",
-       fill = "Media de log(area + 1)") +
-  theme_bw()
-
-
-ggplot(datos.train, aes(x = factor(X), y = factor(Y), fill = area_log)) +
-  geom_tile() +
-  scale_fill_gradient(low = "yellow", high = "red") +
-  labs(title = "Mapa de Calor: Intensidad del Área Quemada",
-       x = "Coordenada X",
-       y = "Coordenada Y",
-       fill = "area_log") +
-  theme_minimal()
-```
-
-**Interpretación**:
-
-**3. ¿Qué es peor: que el suelo profundo esté seco o que las hojas de arriba estén secas?**Comparando el Suelo Seco (DMC) vs El Pasto Seco (FFMC)
-
-```{r}
-library(patchwork)
-
-p1 <- ggplot(datos.train, aes(x = FFMC, y = area_log)) + 
-  geom_jitter(color = "orange", alpha = 0.4) + 
-  labs(title = "Humedad superficial (FFMC)",
-       x = "FFMC",
-       y = "log(area + 1)") +
-  theme_minimal()
-
-p2 <- ggplot(datos.train, aes(x = DMC, y = area_log)) + 
-  geom_jitter(color = "brown", alpha = 0.4) + 
-  labs(title = "Humedad profunda (DMC)",
-       x = "DMC",
-       y = "log(area + 1)") +
-  theme_minimal()
-
-p1 + p2
-```
-
-**Interpretación**:
-
-4\.
-
-```{r}
-ggplot(datos.train, aes(x = temp, y = area_log)) +
-  geom_point(aes(color = ISI), alpha = 0.5) +
-  geom_smooth(method = "loess", color = "red") +
-  labs(title = "Relación entre temperatura y área quemada",
-       subtitle = "El color indica el índice de propagación (ISI)",
-       x = "Temperatura (°C)",
-       y = "log(area + 1)") +
-  theme_minimal()
-```
-
-**Interpetación**:
+Las correlaciones lineales con el tamaño del incendio (area_log) son muy débiles, lo que significa que no depende de una sola variable, sino de la combinación de varios factores. Además, los incendios no crecen siempre de forma proporcional: la intervención de los bomberos y los límites naturales de inflamabilidad hacen que la relación entre el clima y la superficie quemada sea complicada.
 
 # 3. MODELOS DE REGRESIÓN LÍNEAL SIMPLE Y MÚLTIPLE
 
@@ -820,7 +770,7 @@ Se seleccionan aquellas variables que presentan mayor relación con la variable 
 
 ### Entre 'RH' y 'area_log'
 
-#### Estudiamos si existe relación lineal entre 'RH' y 'area_log' 
+#### Estudiamos si existe relación lineal entre 'RH' y 'area_log'
 
 ```{r}
 plot(datos.train$RH, datos.train$area_log,
@@ -1049,5 +999,78 @@ print(bg_resultado)
 El modelo de regresión lineal simple no resulta adecuado para explicar la relación entre la humedad relativa y el área quemada. Aunque se observa una ligera tendencia negativa, esta no es significativa y presenta una alta dispersión. Además, el análisis de residuos sugiere la presencia de no linealidad, lo cual se confirma mediante la prueba RESET, que indica una mala especificación del modelo. Por tanto, la relación entre las variables no puede describirse adecuadamente mediante un modelo lineal simple.
 
 ### Entre 'ISI' y 'area_log'
+
+#### Estudiamos si existe relación lineal entre 'RH' y 'area_log'
+
+```{r}
+plot(datos.train$ISI, datos.train$area_log,
+     main = "Diagrama de dispersión entre ISI y area_log",
+     xlab = "Initial Spread Index (ISI)",
+     ylab = "log(area + 1)",
+     pch = 19, col = "steelblue")
+```
+
+interpretación:
+
+#### Ajustamos un modelo de regresión lineal simple
+
+```{r}
+modelo_isi <- lm(area_log ~ ISI, data = datos.train)
+summary(modelo_isi)
+
+coeficientes <- coef(modelo_isi)
+cat('Intercepto beta0 es ', round(coeficientes[1],2), '\n')
+cat('Pendiente beta1 (ISI) es ', round(coeficientes[2],2), '\n')
+```
+
+Interpretación:
+
+#### Visualización del modelo ajustado
+
+```{r}
+ggplot(datos.train, aes(x = ISI, y = area_log)) +
+  geom_point(size = 3, alpha = 0.6, color = "steelblue") +
+  geom_smooth(method = "lm", se = TRUE, color = "red", fill = "pink", alpha = 0.3) +
+  labs(title = "Modelo de Regresión: ISI vs Área (log)",
+       x = "ISI",
+       y = "log(area + 1)") +
+  theme_minimal()
+```
+
+interpretación:
+
+#### Pruebas de Significancia y Confianza
+
+```{r}
+# Intervalos de confianza
+confint(modelo_isi)
+
+# Valor p y R-cuadrado
+r2_isi <- summary(modelo_isi)$r.squared
+p_val_isi <- summary(modelo_isi)$coefficients[2,4]
+
+cat('El R-squared es: ', round(r2_isi, 4), '\n')
+cat('El p-value es: ', round(p_val_isi, 4), '\n')
+```
+
+Interpretación:
+
+#### Diagnosis del modelo
+
+**1. Linealidad (Residuos vs Ajustados):**
+
+```{r}
+datos_diag_isi <- data.frame(residuos = residuals(modelo_isi), ajustados = fitted(modelo_isi))
+
+ggplot(datos_diag_isi, aes(x = ajustados, y = residuos)) +
+  geom_point(color = "darkgreen", alpha = 0.5) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", se = FALSE, color = "orange") +
+  labs(title = "Residuos vs Ajustados (ISI)") +
+  theme_classic()
+
+# Test RESET
+resettest(modelo_isi, power = 2:3, type = "fitted")
+```
 
 ### Entre 'temp' y 'area_log'
