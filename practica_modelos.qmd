@@ -807,11 +807,7 @@ ggplot(datos.train, aes(x = RH, y = area_log)) +
   theme(plot.title = element_text(size = 14, face = "bold"))
 ```
 
-El gráfico muestra una relación negativa débil entre la humedad relativa (RH) y el área quemada (en escala logarítmica), lo que sugiere que, a medida que aumenta la humedad, el tamaño de los incendios tiende a disminuir ligeramente. Este comportamiento es coherente, ya que una mayor humedad dificulta la propagación del fuego.
-
-Sin embargo, la dispersión de los datos es elevada y no se observa un patrón claro, lo que indica que la humedad relativa por sí sola no explica el tamaño de los incendios. Además, se aprecia una alta concentración de valores cercanos a cero, lo que refleja la presencia de numerosos incendios de pequeña magnitud.
-
-Por último, la banda de confianza es relativamente amplia, lo que refuerza la incertidumbre en la estimación de la relación entre ambas variables.
+El gráfico muestra una relación negativa muy débil entre la humedad relativa y el área quemada, lo que sugiere que a mayor humedad los incendios tienden a ser ligeramente menores. Sin embargo, la gran dispersión de los datos indica que no existe una relación clara y que la humedad por sí sola no explica el tamaño de los incendios.
 
 Vamos a obtener también los intervalos de confianza de los parámetros $\beta$.
 
@@ -820,49 +816,123 @@ ic <- confint(modelo)
 ic
 ```
 
-El intervalo de confianza del 95% para el coeficiente asociado a la humedad relativa incluye el valor 0, lo que indica que dicha variable no es estadísticamente significativa. Por tanto, no se puede afirmar que exista una relación lineal entre la humedad relativa y el área quemada.
+El intervalo de confianza del 95% para el coeficiente asociado a la humedad relativa incluye el valor 0, lo que indica que dicha variable no es estadísticamente significativa.
 
 ```{r}
 summary(modelo)$r.squared
 ```
 
-Esto quiere decir que la variable RH explica el 0.99% de la variabilidad del modelo, lo cual es muy poco.
+La variable RH explica el 0.99% de la variabilidad del modelo, lo cual es muy poco.
 
-Teniendo en cuenta lo dicho anteriormente y el valor p_value = 0.11 \> 0.05, lleva a la conclusión de que RH no es significativa para el modelo.
+Teniendo en cuenta lo dicho anteriormente y el valor p_value de RH = 0.11 \> 0.05, lleva a la conclusión de que RH no es significativa para el modelo.
 
 En conclusión, no hay relación líneal clara entre la húmedad relativa y el área quemada.
 
 #### Diagnosis del modelo
 
-**Linealidad**:
-
 ```{r}
-# Extraer residuos y valores ajustados
-datos_diagnostico <- data.frame(
-  residuos = residuals(modelo),
-  valores_ajustados = fitted(modelo)
+library(ggplot2)
+library(gridExtra)
+
+# Extraer información del modelo
+residuos <- residuals(modelo)
+valores_ajustados <- fitted(modelo)
+residuos_std <- rstandard(modelo)
+residuos_stud <- rstudent(modelo)
+leverage_vals <- hatvalues(modelo)
+
+# =========================
+# 1. Residuos vs Ajustados
+# =========================
+p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), 
+             aes(x = x, y = y)) +
+  geom_point(alpha = 0.7) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Residuos vs Ajustados",
+       x = "Valores ajustados", y = "Residuos") +
+  theme_classic()
+
+# =========================
+# 2. Q-Q Plot
+# =========================
+p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
+  geom_qq(alpha = 0.7) +
+  geom_qq_line(color = "red") +
+  labs(title = "Q-Q Plot") +
+  theme_classic()
+
+# =========================
+# 3. Scale-Location
+# =========================
+p3 <- ggplot(data.frame(x = valores_ajustados, 
+                        y = sqrt(abs(residuos_std))), 
+             aes(x = x, y = y)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Scale-Location",
+       x = "Valores ajustados",
+       y = "√|Residuos estandarizados|") +
+  theme_classic()
+
+# =========================
+# 4. Residuos vs Leverage
+# =========================
+datos_leverage <- data.frame(
+  leverage = leverage_vals,
+  residuos_stud = residuos_stud
 )
 
-# Gráfico de Residuos vs Valores Ajustados
-library(ggplot2)
+p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
+  geom_point(alpha = 0.7) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
+  labs(title = "Residuos vs Leverage",
+       x = "Leverage", y = "Residuos estudentizados") +
+  theme_classic()
 
-ggplot(datos_diagnostico, aes(x = valores_ajustados, y = residuos)) +
-  geom_point(color = "#0072B2", alpha = 0.7) +
+# =========================
+# 5. Histograma
+# =========================
+p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 15,
+                 fill = "lightblue", color = "black", alpha = 0.7) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(residuos), sd = sd(residuos)),
+                color = "red") +
+  labs(title = "Histograma de residuos") +
+  theme_classic()
+
+# =========================
+# 6. Residuos vs Orden
+# =========================
+p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos),
+             aes(x = orden, y = residuos)) +
+  geom_point(alpha = 0.7) +
+  geom_line(alpha = 0.5) +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  geom_smooth(method = "loess", se = FALSE, color = "red", linewidth = 0.8) +
-  labs(
-    title = "Residuos vs Valores Ajustados",
-    x = "Valores ajustados",
-    y = "Residuos"
-  ) +
-  theme_classic(base_size = 12)
+  labs(title = "Residuos vs Orden") +
+  theme_classic()
+
+# =========================
+# Mostrar todos
+# =========================
+grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
 ```
 
-El gráfico de residuos muestra cierta curvatura en la línea de tendencia, lo que sugiere que la relación entre las variables podría no ser completamente lineal. Aunque no se observa un patrón muy marcado, el modelo lineal simple podría no capturar adecuadamente la relación existente. Esto sugiere que podrían explorarse modelos no lineales o transformaciones adicionales.
+El análisis de los gráficos de diagnóstico muestra que el modelo de regresión lineal simple no cumple completamente todos los supuestos.
 
-//Se observa una ligera curvatura en los residuos, lo que indica que el modelo lineal puede no ser el más adecuado.
+En primer lugar, el gráfico de residuos frente a los valores ajustados presenta una ligera curva, lo que indica que la relación entre las variables no es completamente lineal y que el modelo no se ajusta bien.
 
-Hacemos el test asociado:
+El gráfico Q-Q muestra que los residuos siguen aproximadamente una distribución normal en el centro, aunque se desvían en los extremos, por lo que la normalidad no se cumple del todo.
+
+El gráfico Scale-Location indica que la dispersión de los residuos cambia ligeramente, lo que sugiere que la varianza no es completamente constante, aunque el problema no es muy grave.
+
+En el gráfico de residuos frente al leverage no se observan puntos especialmente influyentes, por lo que no hay valores que afecten en exceso al modelo.
+
+El histograma de los residuos tiene una forma bastante simétrica, aunque no coincide perfectamente con una distribución normal.
+
+Por último, el gráfico de residuos frente al orden no muestra ningún patrón claro, lo que indica que los residuos son independientes.
 
 ```{r}
 suppressPackageStartupMessages(library(lmtest))
@@ -873,130 +943,7 @@ print(reset_resultado)
 
 Dado que el p-valor es \<0.05 (95% de confianza), existen evidencias para rechazar la hipótesis nula de que la relación sea lineal.
 
-**Homocedasticidad**:
-
-```{r}
-# Crear datos para el gráfico Scale-Location
-datos_scale_loc <- data.frame(
-  valores_ajustados = fitted(modelo),
-  residuos_std_sqrt = sqrt(abs(rstandard(modelo)))
-)
-
-# Gráfico Scale-Location con ggplot2
-library(ggplot2)
-
-ggplot(datos_scale_loc, aes(x = valores_ajustados, y = residuos_std_sqrt)) +
-  geom_point(color = "#0072B2", alpha = 0.7) +
-  geom_smooth(method = "loess", se = FALSE, color = "red", linewidth = 0.8) +
-  labs(
-    title = "Scale-Location",
-    x = "Valores ajustados",
-    y = expression(sqrt("|Residuos estandarizados|"))
-  ) +
-  theme_classic(base_size = 12)
-
-# Prueba de Breusch-Pagan
-suppressPackageStartupMessages(library(lmtest))
-bp_resultado <- bptest(modelo)
-print(bp_resultado)
-```
-
-Se observa cierta variación en la dispersión de los residuos, lo que sugiere una ligera heterocedasticidad.
-
-**Normalidad de los residuos**:
-
-```{r}
-# Crear datos para los gráficos
-residuos <- residuals(modelo)
-
-# 1. Gráfico Q-Q con ggplot2
-library(ggplot2)
-
-datos_qq <- data.frame(residuos = residuos)
-
-p1 <- ggplot(datos_qq, aes(sample = residuos)) +
-  geom_qq(color = "#0072B2", alpha = 0.7) +
-  geom_qq_line(color = "red", linetype = "dashed") +
-  labs(
-    title = "Normal Q-Q Plot",
-    x = "Cuantiles teóricos",
-    y = "Cuantiles de la muestra"
-  ) +
-  theme_classic(base_size = 10)
-
-# 2. Histograma de residuos
-datos_hist <- data.frame(residuos = residuos)
-
-p2 <- ggplot(datos_hist, aes(x = residuos)) +
-  geom_histogram(aes(y = after_stat(density)), bins = 15,
-                 fill = "lightblue", color = "black", alpha = 0.7) +
-  stat_function(fun = dnorm,
-                args = list(mean = mean(residuos), sd = sd(residuos)),
-                color = "red", linewidth = 1) +
-  labs(
-    title = "Histograma de residuos",
-    x = "Residuos",
-    y = "Densidad"
-  ) +
-  theme_classic(base_size = 10)
-
-# 3. Mostrar gráficos
-library(gridExtra)
-grid.arrange(p1, p2, ncol = 2)
-
-# 4. Test de normalidad
-
-# Shapiro-Wilk
-shapiro_resultado <- shapiro.test(residuals(modelo))
-print(shapiro_resultado)
-
-# Jarque-Bera
-library(tseries)
-jb_resultado <- jarque.bera.test(residuals(modelo))
-print(jb_resultado)
-```
-
-El gráfico Q-Q muestra que los puntos siguen aproximadamente la línea recta en la zona central, lo que indica que los residuos presentan un comportamiento cercano a la normalidad en esa región. Sin embargo, se observan desviaciones en los extremos, especialmente en las colas, lo que sugiere que la distribución no es completamente normal.
-
-El histograma de los residuos presenta una forma aproximadamente simétrica, aunque no se ajusta perfectamente a la curva normal teórica, mostrando cierta dispersión y ligeras desviaciones.
-
-En conjunto, estos resultados indican que la normalidad de los residuos se cumple de forma aproximada, aunque no de manera estricta
-
-**Independencia de los residuos**:
-
-```{r}
-# Gráfico de residuos vs orden de observación
-library(ggplot2)
-
-datos_orden <- data.frame(
-  orden = 1:length(residuals(modelo)),
-  residuos = residuals(modelo)
-)
-
-ggplot(datos_orden, aes(x = orden, y = residuos)) +
-  geom_point(color = "#0072B2", alpha = 0.7) +
-  geom_line(color = "#0072B2", alpha = 0.5) +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(
-    title = "Residuos vs Orden de Observación",
-    x = "Orden de observación",
-    y = "Residuos"
-  ) +
-  theme_classic(base_size = 12)
-
-# Prueba de Durbin-Watson
-library(lmtest)
-dw_resultado <- dwtest(modelo)
-print(dw_resultado)
-
-# Prueba de Breusch-Godfrey
-bg_resultado <- bgtest(modelo, order = 2)
-print(bg_resultado)
-```
-
-**En conclusión:**
-
-El modelo de regresión lineal simple no resulta adecuado para explicar la relación entre la humedad relativa y el área quemada. Aunque se observa una ligera tendencia negativa, esta no es significativa y presenta una alta dispersión. Además, el análisis de residuos sugiere la presencia de no linealidad, lo cual se confirma mediante la prueba RESET, que indica una mala especificación del modelo. Por tanto, la relación entre las variables no puede describirse adecuadamente mediante un modelo lineal simple.
+En conjunto, aunque algunos supuestos se cumplen de forma aproximada, la presencia de no linealidad y la baja capacidad explicativa del modelo indican que la regresión lineal simple no es adecuada para describir la relación entre la humedad relativa y el área quemada.
 
 ### Entre 'ISI' y 'area_log'
 
