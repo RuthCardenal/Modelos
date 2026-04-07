@@ -10,6 +10,8 @@ format:
 editor: visual
 ---
 
+//en regularización estandarizar. En múltiple estandarizar depende del resultado.
+
 # 1. PRESENTACIÓN Y DESCRIPCIÓN DEL DATASET
 
 Dataset: <https://archive.ics.uci.edu/dataset/162/forest+fires>
@@ -350,7 +352,7 @@ boxplot(datos.train$rain,
 
 **Boxplot:** El diagrama de caja ratifica esta falta de variabilidad: la estructura de la caja aparece colapsada sobre el cero, dado que la mediana y los cuartiles coinciden en ese valor. Se detectan tres valores atípicos que corresponden a eventos específicos con precipitaciones bajas de aproximadamente 0.8, 1.0 y 1.4 mm/m².
 
-#### Análisis de la variable numérica 'area':
+#### Análisis de la variable numérica 'area': 
 
 ```{r}
 
@@ -742,7 +744,7 @@ Finalmente, la matriz de correlación confirma que variables como temperatura y 
 
 En conjunto, esto indica que los incendios grandes son fenómenos complejos, donde intervienen múltiples factores al mismo tiempo.
 
-### PREGUNTAS: CONTINUAR. LAS PREGUNTAS VAN DESPUES DEL ANÁLISIS. ENTRE 3 A 5 PREGUNTAS ESTÁ BIEN.
+### PREGUNTAS
 
 **¿Cómo afecta la temperatura al riesgo de incendios grandes?**
 
@@ -784,6 +786,7 @@ El diagrama de dispersión no muestra una relación lineal clara entre la humeda
 #### Ajustamos un modelo de regresión lineal simple
 
 ```{r}
+set.seed(456)
 modelo <- lm(area_log ~ RH, data = datos.train)
 
 summary(modelo)
@@ -841,9 +844,9 @@ residuos_std <- rstandard(modelo)
 residuos_stud <- rstudent(modelo)
 leverage_vals <- hatvalues(modelo)
 
-# =========================
+
 # 1. Residuos vs Ajustados
-# =========================
+
 p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), 
              aes(x = x, y = y)) +
   geom_point(alpha = 0.7) +
@@ -853,18 +856,18 @@ p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos),
        x = "Valores ajustados", y = "Residuos") +
   theme_classic()
 
-# =========================
+
 # 2. Q-Q Plot
-# =========================
+
 p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
   geom_qq(alpha = 0.7) +
   geom_qq_line(color = "red") +
   labs(title = "Q-Q Plot") +
   theme_classic()
 
-# =========================
+
 # 3. Scale-Location
-# =========================
+
 p3 <- ggplot(data.frame(x = valores_ajustados, 
                         y = sqrt(abs(residuos_std))), 
              aes(x = x, y = y)) +
@@ -875,9 +878,9 @@ p3 <- ggplot(data.frame(x = valores_ajustados,
        y = "√|Residuos estandarizados|") +
   theme_classic()
 
-# =========================
+
 # 4. Residuos vs Leverage
-# =========================
+
 datos_leverage <- data.frame(
   leverage = leverage_vals,
   residuos_stud = residuos_stud
@@ -891,9 +894,9 @@ p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
        x = "Leverage", y = "Residuos estudentizados") +
   theme_classic()
 
-# =========================
+
 # 5. Histograma
-# =========================
+
 p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
   geom_histogram(aes(y = after_stat(density)), bins = 15,
                  fill = "lightblue", color = "black", alpha = 0.7) +
@@ -903,9 +906,8 @@ p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
   labs(title = "Histograma de residuos") +
   theme_classic()
 
-# =========================
 # 6. Residuos vs Orden
-# =========================
+
 p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos),
              aes(x = orden, y = residuos)) +
   geom_point(alpha = 0.7) +
@@ -914,9 +916,9 @@ p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos),
   labs(title = "Residuos vs Orden") +
   theme_classic()
 
-# =========================
+
 # Mostrar todos
-# =========================
+
 grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
 ```
 
@@ -936,14 +938,20 @@ Por último, el gráfico de residuos frente al orden no muestra ningún patrón 
 
 ```{r}
 suppressPackageStartupMessages(library(lmtest))
-# Test RESET para el modelo correcto (horas de estudio)
-reset_resultado <- resettest(modelo_mpg, power = 2:3, type = "fitted")
+
+# Test RESET para comprobar la linealidad del modelo
+reset_resultado <- resettest(modelo, power = 2:3, type = "fitted")
+
 print(reset_resultado)
 ```
 
-Dado que el p-valor es \<0.05 (95% de confianza), existen evidencias para rechazar la hipótesis nula de que la relación sea lineal.
+Dado que el p-valor es \>0.05 (95% de confianza), existen evidencias para no rechazar la hipótesis nula de que la relación sea lineal.
 
-En conjunto, aunque algunos supuestos se cumplen de forma aproximada, la presencia de no linealidad y la baja capacidad explicativa del modelo indican que la regresión lineal simple no es adecuada para describir la relación entre la humedad relativa y el área quemada.
+El test RESET no muestra evidencia de mala especificación del modelo (p-valor = 0.6), por lo que la forma lineal puede considerarse adecuada. Sin embargo, esto no implica que el modelo sea útil, ya que la variable explicativa no resulta significativa y el ajuste general es bajo.
+
+// Líneal aproximadamente pero no normal
+
+// tranformación logaritmica en x para ver
 
 ### Entre 'ISI' y 'area_log'
 
@@ -1021,3 +1029,54 @@ resettest(modelo_isi, power = 2:3, type = "fitted")
 ```
 
 ### Entre 'temp' y 'area_log'
+
+```{r}
+datos_grafico <- datos.train %>%
+  mutate(temp_rango = cut(temp, 
+                          breaks = seq(0, 35, by = 5), 
+                          include.lowest = TRUE)) %>%
+  group_by(temp_rango) %>%
+  summarise(area_total = mean(area_log, na.rm = TRUE)) %>%
+  filter(!is.na(temp_rango))
+
+ggplot(datos_grafico, aes(x = temp_rango, y = area_total, fill = as.numeric(temp_rango))) +
+  geom_col(color = "white", lwd = 0.2) + 
+  coord_flip() + 
+
+  scale_fill_gradient(low = "#fee5d9", high = "#67000d") + 
+  labs(title = "Relación entre Temperatura y Superficie Quemada",
+       subtitle = "La anchura de la barra indica el promedio de área ",
+       x = "Rango de Temperatura (°C)",
+       y = "Superficie Quemada ",
+       fill = "Intensidad de Temp") +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank())
+```
+
+## Modelos líneales múltiples
+
+Se seleccionan variables metereológicas e índices de combustible, exceptuando FFMC y DC debido a que poseen alta correlación con otras características.
+
+### Configuración inicial
+
+```{r}
+# Cargar librerías necesarias
+library(tidyverse)
+library(MASS)
+library(car)          # Para VIF y diagnósticos
+library(corrplot)     # Para matrices de correlación
+library(leaps)        # Para selección de variables
+library(broom)        # Para resultados ordenados
+library(GGally)       # Para gráficos de pares
+library(caret)        # Para validación cruzada
+library(performance)  # Para evaluación de modelos
+
+set.seed(123)
+```
+
+```{r}
+modelo_m <- lm(area_log ~ temp + RH + wind + rain + DMC + ISI, 
+                   data = datos.train)
+
+summary(modelo_m)
+```
