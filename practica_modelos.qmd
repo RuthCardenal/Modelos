@@ -996,7 +996,9 @@ plot(datos.train$ISI, datos.train$area_log,
      pch = 19, col = "steelblue")
 ```
 
-interpretación:
+interpretación: El ISI nos dice qué tan rápido podría propagarse un incendio según el viento y la sequedad, pero los datos muestran que esto no garantiza que el incendio sea grande. La mayoría de los incendios terminan siendo pequeños, aunque el ISI sea alto, y algunos incendios grandes ocurrieron con ISI bajo. La correlación casi nula entre ISI y el área final quemada confirma que ningún factor meteorológico por sí solo predice el tamaño de un incendio. Por eso, para entender y predecir la magnitud real de los incendios, se necesitan modelos más complejos o de Machine Learning, que puedan capturar cómo varios factores interactúan juntos.
+
+Ajustamos un modelo de regresión lineal simple
 
 #### Ajustamos un modelo de regresión lineal simple
 
@@ -1009,7 +1011,11 @@ cat('Intercepto beta0 es ', round(coeficientes[1],2), '\n')
 cat('Pendiente beta1 (ISI) es ', round(coeficientes[2],2), '\n')
 ```
 
-Interpretación:
+Interpretación: Los resultados del modelo de regresión lineal simple indican que el Índice de Propagación Inicial (ISI) no presenta una relación significativa con el área quemada. En concreto, el p-valor asociado al ISI (0.122) es superior al nivel de significancia habitual (α = 0.05), lo que implica que no existe evidencia estadística suficiente para afirmar que esta variable influya de manera lineal en la magnitud del incendio.
+
+Asimismo, el coeficiente de determinación (R² ≈ 0.009) muestra que el modelo apenas explica un 1% de la variabilidad observada, lo que confirma su escasa capacidad predictiva. Aunque el coeficiente estimado para el ISI es negativo, este resultado no es fiable desde el punto de vista estadístico y puede atribuirse al ruido presente en los datos.
+
+En conjunto, estos resultados indican que, si bien el ISI es un indicador técnico del potencial de propagación del fuego, no constituye un buen predictor del tamaño final del incendio en este conjunto de datos.
 
 #### Visualización del modelo ajustado
 
@@ -1023,40 +1029,227 @@ ggplot(datos.train, aes(x = ISI, y = area_log)) +
   theme_minimal()
 ```
 
-interpretación:
-
 #### Pruebas de Significancia y Confianza
 
 ```{r}
 # Intervalos de confianza
-confint(modelo_isi)
-
-# Valor p y R-cuadrado
-r2_isi <- summary(modelo_isi)$r.squared
-p_val_isi <- summary(modelo_isi)$coefficients[2,4]
-
-cat('El R-squared es: ', round(r2_isi, 4), '\n')
-cat('El p-value es: ', round(p_val_isi, 4), '\n')
+ic_isi<-confint(modelo_isi)
+ic_isi
 ```
 
-Interpretación:
+Interpretación: Para confirmar la falta de relación entre el ISI y el área quemada, se analizaron los intervalos de confianza al 95% de los coeficientes del modelo. En el caso del ISI, el intervalo obtenido es \[−0.0596,0.0071\]. Dado que este intervalo incluye el valor cero, se concluye que no hay evidencia suficiente para afirmar que el ISI tenga un efecto real sobre el área quemada.
+
+En términos simples, esto significa que no se puede asegurar que el ISI influya en el tamaño del incendio, ya que su impacto podría ser incluso nulo. Por tanto, esta variable no aporta información relevante al modelo, y cualquier pequeña variación observada en su coeficiente se debe al azar o al ruido de los datos, y no a una relación real entre las variables.
 
 #### Diagnosis del modelo
 
 **1. Linealidad (Residuos vs Ajustados):**
 
 ```{r}
-datos_diag_isi <- data.frame(residuos = residuals(modelo_isi), ajustados = fitted(modelo_isi))
+# Asegúrate de haber definido el modelo antes
+modelo <- lm(area_log ~ ISI, data = datos.train)
 
-ggplot(datos_diag_isi, aes(x = ajustados, y = residuos)) +
-  geom_point(color = "darkgreen", alpha = 0.5) +
+library(ggplot2)
+library(gridExtra)
+
+# Extraer información del modelo
+residuos <- residuals(modelo)
+valores_ajustados <- fitted(modelo)
+residuos_std <- rstandard(modelo)
+residuos_stud <- rstudent(modelo)
+leverage_vals <- hatvalues(modelo)
+
+# 1. Residuos vs Ajustados (Linealidad y Varianza)
+p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), 
+             aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  geom_smooth(method = "loess", se = FALSE, color = "orange") +
-  labs(title = "Residuos vs Ajustados (ISI)") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Residuos vs Ajustados",
+       x = "Valores ajustados", y = "Residuos") +
   theme_classic()
 
-# Test RESET
-resettest(modelo_isi, power = 2:3, type = "fitted")
+# 2. Q-Q Plot (Normalidad)
+p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
+  geom_qq(alpha = 0.7, color = "steelblue") +
+  geom_qq_line(color = "red") +
+  labs(title = "Q-Q Plot") +
+  theme_classic()
+
+# 3. Scale-Location (Homocedasticidad)
+p3 <- ggplot(data.frame(x = valores_ajustados, 
+                        y = sqrt(abs(residuos_std))), 
+             aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Scale-Location",
+       x = "Valores ajustados",
+       y = "sqrt(|Res. Std|)") +
+  theme_classic()
+
+# 4. Residuos vs Leverage (Puntos influyentes)
+datos_leverage <- data.frame(leverage = leverage_vals, residuos_stud = residuos_stud)
+p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
+  labs(title = "Residuos vs Leverage",
+       x = "Leverage", y = "Residuos estudentizados") +
+  theme_classic()
+
+# 5. Histograma (Distribución de errores)
+p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 15,
+                 fill = "lightblue", color = "black", alpha = 0.7) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(residuos), sd = sd(residuos)),
+                color = "red", linewidth = 1) +
+  labs(title = "Histograma de residuos") +
+  theme_classic()
+
+# 6. Residuos vs Orden (Independencia)
+p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos),
+             aes(x = orden, y = residuos)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_line(alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuos vs Orden") +
+  theme_classic()
+
+# Renderizar cuadrícula
+grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
+```
+
+Interpretación:
+
+1.  Supuesto de Linealidad y Homocedasticidad
+
+El gráfico de Residuos vs. Valores Ajustados revela una distribución no aleatoria de los errores. Se observa una concentración de datos en valores ajustados altos y una ausencia de observaciones en el rango inicial, lo que sugiere que el modelo no captura adecuadamente la estructura de los datos.
+
+Asimismo, el gráfico Scale-Location muestra una tendencia ascendente en la línea de suavizado roja, lo que confirma la presencia de heterocedasticidad. Esto implica que la varianza del error no es constante y aumenta proporcionalmente al valor de la predicción, invalidando la eficiencia de los estimadores por mínimos cuadrados ordinarios (MCO).
+
+2.  Normalidad de los Residuos
+
+El análisis de normalidad a través del Q-Q Plot y el Histograma de Residuos indica desviaciones significativas.
+
+En el Q-Q Plot, los residuos se alejan de la diagonal en ambos extremos, especialmente en la cola superior.
+
+El histograma muestra una asimetría positiva (sesgo a la derecha) pronunciada.
+
+Estos resultados indican que las inferencias estadísticas (intervalos de confianza y pruebas de hipótesis $t$ o $F$) podrían no ser precisas debido al incumplimiento del supuesto de normalidad.
+
+3.  Puntos Influyentes y Outliers
+
+Mediante el gráfico de Residuos vs. Leverage, se identificó un punto con un nivel de apalancamiento superior a $0.3$, lo cual es considerablemente alto en comparación con el resto de la muestra. Este dato actúa como un punto influyente que podría estar sesgando los coeficientes del modelo. Adicionalmente, el gráfico de Residuos vs. Orden detecta varios valores atípicos (outliers) que superan las 4 unidades de residuo, afectando la estabilidad del ajuste.
+
+Estudio del outlier:
+
+```{r}
+# 1. Identificar las filas con alto leverage
+n <- nrow(datos.train)
+k <- 1
+umbral_lev <- 2 * (k + 1) / n
+leverage_vals <- hatvalues(modelo)
+filas_alto_leverage <- which(leverage_vals > umbral_lev)
+
+# 2. Extraer los valores de esas filas
+# Mostramos: Fila, valor de ISI, valor de log_area y su valor de leverage
+tabla_leverage <- data.frame(
+  Fila = filas_alto_leverage,
+  ISI = datos.train$ISI[filas_alto_leverage],
+  log_area = datos.train$area_log[filas_alto_leverage],
+  Leverage = leverage_vals[filas_alto_leverage]
+)
+
+# 3. Ordenar por Leverage para ver el más "bestia" primero
+tabla_leverage <- tabla_leverage[order(-tabla_leverage$Leverage), ]
+
+# 4. Ver los resultados
+print(tabla_leverage)
+```
+
+```{r}
+# 1. Crear el nuevo modelo SIN el punto influyente (fila 169)
+# Quitamos los dos grandes sospechosos
+datos_limpios <- datos.train[-169,]
+modelo_limpio <- lm(area_log ~ ISI, data = datos_limpios)
+
+# --- A partir de aquí, usamos 'modelo_limpio' para las gráficas ---
+
+library(ggplot2)
+library(gridExtra)
+
+# Extraer información del nuevo modelo
+residuos <- residuals(modelo_limpio)
+valores_ajustados <- fitted(modelo_limpio)
+residuos_std <- rstandard(modelo_limpio)
+residuos_stud <- rstudent(modelo_limpio)
+leverage_vals <- hatvalues(modelo_limpio)
+
+# 1. Residuos vs Ajustados
+p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Residuos vs Ajustados (Sin 23)", x = "Valores ajustados", y = "Residuos") +
+  theme_classic()
+
+# 2. Q-Q Plot
+p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
+  geom_qq(alpha = 0.7, color = "steelblue") +
+  geom_qq_line(color = "red") +
+  labs(title = "Q-Q Plot") +
+  theme_classic()
+
+# 3. Scale-Location
+p3 <- ggplot(data.frame(x = valores_ajustados, y = sqrt(abs(residuos_std))), aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Scale-Location", x = "Valores ajustados", y = "sqrt(|Res. Std|)") +
+  theme_classic()
+
+# 4. Residuos vs Leverage
+datos_leverage <- data.frame(leverage = leverage_vals, residuos_stud = residuos_stud)
+p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
+  labs(title = "Residuos vs Leverage", x = "Leverage", y = "Residuos estudentizados") +
+  theme_classic()
+
+# 5. Histograma
+p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "lightblue", color = "black", alpha = 0.7) +
+  stat_function(fun = dnorm, args = list(mean = mean(residuos), sd = sd(residuos)), color = "red", linewidth = 1) +
+  labs(title = "Histograma de residuos") +
+  theme_classic()
+
+# 6. Residuos vs Orden
+p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos), aes(x = orden, y = residuos)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_line(alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuos vs Orden") +
+  theme_classic()
+
+# Renderizar cuadrícula limpia
+grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
+```
+
+interpretación: El gráfico de residuos frente a los valores ajustados muestra que, en general, la línea se mantiene cerca de cero. Aunque en los extremos se nota una ligera curvatura y hay más puntos concentrados en los valores altos, el modelo parece captar bastante bien la relación lineal principal.
+
+Respecto a la homocedasticidad, el gráfico Scale-Location indica que la dispersión de los residuos aumenta un poco cuando crecen los valores predichos. Sin embargo, como este aumento no es muy marcado ni forma un patrón claro en forma de embudo, se puede considerar que la varianza es más o menos constante.
+
+Por lo tanto, se pueden interpretar los resultados del modelo, aunque conviene hacerlo con algo de precaución, especialmente en lo relacionado con la precisión de los errores estándar.
+
+```{r}
+suppressPackageStartupMessages(library(lmtest))
+
+# Test RESET para tu modelo de incendios
+# Cambiamos 'modelo_mpg' por tu objeto de modelo real
+reset_resultado <- resettest(modelo_limpio, power = 2:3, type = "fitted")
+
+print(reset_resultado)
 ```
 
 ### Entre 'temp' y 'area_log'
@@ -1093,21 +1286,13 @@ Se seleccionan variables metereológicas e índices de combustible, exceptuando 
 ```{r}
 # Cargar librerías necesarias
 library(tidyverse)
-library(MASS)
-library(car)          # Para VIF y diagnósticos
-library(corrplot)     # Para matrices de correlación
-library(leaps)        # Para selección de variables
-library(broom)        # Para resultados ordenados
-library(GGally)       # Para gráficos de pares
-library(caret)        # Para validación cruzada
-library(performance)  # Para evaluación de modelos
 
 set.seed(123)
 ```
 
 ```{r}
-modelo_m <- lm(area_log ~ temp + RH + wind + rain + DMC + ISI, 
-                   data = datos.train)
+#modelo_m <- lm(area_log ~ temp + RH + wind + rain + DMC + ISI, 
+                   #data = datos.train)
 
-summary(modelo_m)
+#summary(modelo_m)
 ```
