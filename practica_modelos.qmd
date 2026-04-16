@@ -156,6 +156,37 @@ View(datos.valid)
 dim(datos.valid) #130 filas
 ```
 
+Resumen general del conjunto de entrenamiento:
+
+```{r}
+summary(datos.train)
+str (datos.train)
+tibble(datos.train)
+```
+
+Este primer vistazo a los datos muestra que el dataset está compuesto principalmente por variables numéricas continuas relacionadas con condiciones meteorológicas y de riesgo de incendio, junto con algunas variables categóricas como el mes y el día. Se observa que existen diferencias importantes en las escalas de algunas variables y una fuerte asimetría en la variable objetivo 'area', con muchos valores bajos o nulos y algunos muy elevados. Además, variables como 'rain' presentan poca variabilidad. Por ello, será necesario considerar transformaciones en ciertas variables para evitar sesgos en el modelado y mejorar la interpretación de los resultados.
+
+Por otro lado, se convierten las variables 'month' y 'day' a factores porque la conversión a factores permite que los modelos generen variables dummy y traten correctamente la naturaleza cualitativa de estas variables.
+
+```{r}
+datos.train$month <- as.factor(datos.train$month)
+datos.train$day <- as.factor(datos.train$day)
+str(datos.train)
+```
+
+```{r}
+# Nas o valores faltantes en columna
+nulos_por_columna <- colSums(is.na(datos.train))
+
+# Columnas con valores nulos
+nulos_por_columna[nulos_por_columna > 0]
+
+total_nulos <- sum(nulos_por_columna)
+cat("Total de valores nulos en el dataset de entrenamiento:", total_nulos, "\n")
+```
+
+Se observa que la muestra de entrenamiento no posee valores faltantes.
+
 # 3. ANÁLISIS EXPLORATORIO DE DATOS
 
 ## ANÁLISIS UNIVARIANTE
@@ -352,7 +383,7 @@ boxplot(datos.train$rain,
 
 **Boxplot:** El diagrama de caja ratifica esta falta de variabilidad: la estructura de la caja aparece colapsada sobre el cero, dado que la mediana y los cuartiles coinciden en ese valor. Se detectan tres valores atípicos que corresponden a eventos específicos con precipitaciones bajas de aproximadamente 0.8, 1.0 y 1.4 mm/m².
 
-#### Análisis de la variable numérica 'area': 
+#### Análisis de la variable numérica 'area':
 
 ```{r}
 
