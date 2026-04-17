@@ -1296,3 +1296,24 @@ set.seed(123)
 
 #summary(modelo_m)
 ```
+
+```{r}
+# Modelo múltiple con todas las variables (área original)
+modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain, 
+                           data = datos.train)
+
+# Comparación de modelos
+cat("=== COMPARACIÓN DE MODELOS (ÁREA ORIGINAL) ===\n")
+cat("Modelo Simple - R²:", round(summary(modelo_simple_orig)$r.squared, 4), "\n")
+cat("Modelo Múltiple - R²:", round(summary(modelo_multiple_orig)$r.squared, 4), "\n")
+cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.r.squared, 4), "\n")
+
+# Ver el resumen completo
+summary(modelo_multiple_orig)
+```
+
+Como todos los p-valores de las variables son mayores a 0.05, no se puede afirmar que alguna de ellas tenga un efecto real sobre el área quemada.
+
+Además, el modelo en conjunto tampoco es significativo (p-valor global = 0.8454), lo que indica que no explica bien los datos. El valor de R² ajustado es negativo (-0.017), lo que significa que las variables elegidas no aportan información útil para explicar el área en su forma original.
+
+Por otro lado, el error estándar de los residuos es bastante alto (71.96), lo que muestra que hay mucha diferencia entre los valores reales y los que predice el modelo.
