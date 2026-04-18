@@ -809,7 +809,8 @@ Se seleccionan aquellas variables que presentan mayor relación con la variable 
 plot(datos.train$RH, datos.train$area_log,
      main = "Diagrama de dispersión entre RH y area_log",
      xlab = "Humedad relativa (RH)",
-     ylab = "log(area + 1)")
+     ylab = "log(area + 1)",
+     pch = 19, col = "steelblue")
 ```
 
 El diagrama de dispersión no muestra una relación lineal clara entre la humedad relativa y el área quemada, ya que los datos presentan una alta dispersión y no siguen un patrón definido.
@@ -841,26 +842,24 @@ ggplot(datos.train, aes(x = RH, y = area_log)) +
   theme(plot.title = element_text(size = 14, face = "bold"))
 ```
 
-El gráfico muestra una relación negativa muy débil entre la humedad relativa y el área quemada, lo que sugiere que a mayor humedad los incendios tienden a ser ligeramente menores. Sin embargo, la gran dispersión de los datos indica que no existe una relación clara y que la humedad por sí sola no explica el tamaño de los incendios.
+El gráfico muestra una relación lineal negativa muy débil entre la humedad relativa y el área quemada, lo que sugiere que a mayor humedad los incendios tienden a ser ligeramente menores. Sin embargo, la gran dispersión de los datos indica que no existe una relación clara y que la humedad por sí sola no explica el tamaño de los incendios.
 
-Vamos a obtener también los intervalos de confianza de los parámetros $\beta$.
+Vamos a obtener también los intervalos de confianza de los parámetros $\beta$:
 
 ```{r}
 ic <- confint(modelo)
 ic
 ```
 
-El intervalo de confianza del 95% para el coeficiente asociado a la humedad relativa incluye el valor 0, lo que indica que dicha variable no es estadísticamente significativa.
+El intervalo de confianza del 95% para el coeficiente asociado a la humedad relativa incluye el valor 0, lo que indica que no existe evidencia suficiente para considerar que esta variable sea estadísticamente significativa.
 
 ```{r}
 summary(modelo)$r.squared
 ```
 
-La variable RH explica el 0.99% de la variabilidad del modelo, lo cual es muy poco.
+La variable RH explica aproximadamente el 0.99% de la variabilidad de la variable respuesta, lo cual es muy bajo.
 
-Teniendo en cuenta lo dicho anteriormente y el valor p_value de RH = 0.11 \> 0.05, lleva a la conclusión de que RH no es significativa para el modelo.
-
-En conclusión, no hay relación líneal clara entre la húmedad relativa y el área quemada.
+Además, dado que el p-valor de RH es 0.11 \> 0.05, no existe evidencia suficiente para considerarla significativa en el modelo.
 
 #### Diagnosis del modelo
 
@@ -953,19 +952,19 @@ p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos),
 grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
 ```
 
-El análisis de los gráficos de diagnóstico muestra que el modelo de regresión lineal simple no cumple completamente todos los supuestos.
+El análisis de los gráficos de diagnóstico muestra que el modelo de regresión lineal simple no cumple completamente los supuestos clásicos del modelo lineal.
 
-En primer lugar, el gráfico de residuos frente a los valores ajustados presenta una ligera curva, lo que indica que la relación entre las variables no es completamente lineal y que el modelo no se ajusta bien.
+El gráfico de residuos frente a los valores ajustados presenta una ligera curvatura, lo que sugiere una falta de linealidad.
 
-El gráfico Q-Q muestra que los residuos siguen aproximadamente una distribución normal en el centro, aunque se desvían en los extremos, por lo que la normalidad no se cumple del todo.
+El gráfico Q-Q indica que los residuos siguen aproximadamente una distribución normal en el centro, aunque presentan desviaciones en los extremos, por lo que la normalidad no se cumple completamente.
 
-El gráfico Scale-Location indica que la dispersión de los residuos cambia ligeramente, lo que sugiere que la varianza no es completamente constante, aunque el problema no es muy grave.
+El gráfico Scale-Location sugiere cierta heterocedasticidad, aunque no muy pronunciada.
 
-En el gráfico de residuos frente al leverage no se observan puntos especialmente influyentes, por lo que no hay valores que afecten en exceso al modelo.
+En el gráfico de residuos frente al leverage no se observan puntos especialmente influyentes.
 
-El histograma de los residuos tiene una forma bastante simétrica, aunque no coincide perfectamente con una distribución normal.
+El histograma de residuos presenta cierta simetría, aunque con desviaciones respecto a la normalidad.
 
-Por último, el gráfico de residuos frente al orden no muestra ningún patrón claro, lo que indica que los residuos son independientes.
+Por último, el gráfico de residuos frente al orden no muestra patrones claros, lo que sugiere independencia de los errores.
 
 ```{r}
 suppressPackageStartupMessages(library(lmtest))
@@ -976,13 +975,11 @@ reset_resultado <- resettest(modelo, power = 2:3, type = "fitted")
 print(reset_resultado)
 ```
 
-Dado que el p-valor es \>0.05 (95% de confianza), existen evidencias para no rechazar la hipótesis nula de que la relación sea lineal.
+El test RESET no muestra evidencia de mala especificación del modelo (p-valor \> 0.05), por lo que la forma funcional lineal puede considerarse adecuada.
 
-El test RESET no muestra evidencia de mala especificación del modelo (p-valor = 0.6), por lo que la forma lineal puede considerarse adecuada. Sin embargo, esto no implica que el modelo sea útil, ya que la variable explicativa no resulta significativa y el ajuste general es bajo.
+Sin embargo, esto no implica que el modelo sea útil, ya que la variable explicativa no resulta significativa y la capacidad explicativa es muy baja.
 
-// Líneal aproximadamente pero no normal
-
-// tranformación logaritmica en x para ver
+En conclusión, aunque el modelo puede considerarse aproximadamente lineal, no resulta útil desde el punto de vista predictivo.
 
 ### Entre 'ISI' y 'area_log'
 
@@ -1279,23 +1276,9 @@ ggplot(datos_grafico, aes(x = temp_rango, y = area_total, fill = as.numeric(temp
 
 ## Modelos líneales múltiples
 
-Se seleccionan variables metereológicas e índices de combustible, exceptuando FFMC y DC debido a que poseen alta correlación con otras características.
+Se consideran variables meteorológicas e índices de combustible para modelar el área quemada.
 
-### Configuración inicial
-
-```{r}
-# Cargar librerías necesarias
-library(tidyverse)
-
-set.seed(123)
-```
-
-```{r}
-#modelo_m <- lm(area_log ~ temp + RH + wind + rain + DMC + ISI, 
-                   #data = datos.train)
-
-#summary(modelo_m)
-```
+### 1º Modelo: Todas las variables originales.
 
 ```{r}
 # Modelo múltiple con todas las variables (área original)
@@ -1304,7 +1287,6 @@ modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wi
 
 # Comparación de modelos
 cat("=== COMPARACIÓN DE MODELOS (ÁREA ORIGINAL) ===\n")
-cat("Modelo Simple - R²:", round(summary(modelo_simple_orig)$r.squared, 4), "\n")
 cat("Modelo Múltiple - R²:", round(summary(modelo_multiple_orig)$r.squared, 4), "\n")
 cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.r.squared, 4), "\n")
 
@@ -1312,8 +1294,60 @@ cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.
 summary(modelo_multiple_orig)
 ```
 
-Como todos los p-valores de las variables son mayores a 0.05, no se puede afirmar que alguna de ellas tenga un efecto real sobre el área quemada.
+El modelo de regresión lineal múltiple con la variable original presenta una capacidad explicativa muy limitada (R² ajustado = -0.017), indicando que las variables incluidas no aportan información útil para explicar el área quemada.
 
-Además, el modelo en conjunto tampoco es significativo (p-valor global = 0.8454), lo que indica que no explica bien los datos. El valor de R² ajustado es negativo (-0.017), lo que significa que las variables elegidas no aportan información útil para explicar el área en su forma original.
+Además, el modelo en conjunto no resulta significativo (p-valor global = 0.8454), lo que refuerza la falta de relación entre las variables explicativas y la variable respuesta.
 
-Por otro lado, el error estándar de los residuos es bastante alto (71.96), lo que muestra que hay mucha diferencia entre los valores reales y los que predice el modelo.
+Ninguna de las variables resulta estadísticamente significativa, lo que sugiere que el modelo no es adecuado para explicar el área en su forma original.
+
+Por otro lado, el error estándar de los residuos es elevado (71.96), lo que indica una alta variabilidad en los errores y un bajo ajuste del modelo.
+
+### 2º Modelo: Todas las variables originales con la variable objetivo transformada.
+
+Se introduce este nuevo modelo debido a que la variable $area$ presenta fuerte asimetría (muchos valores cercanos a 0) y distribución no normal. Al realizar la transformación logarítima a esta característica, se reduce la asimetría, mejora la linealidad y facilita el cumplimiento de los supuestos del modelo.
+
+#### Ajustamos el modelo
+
+```{r}
+modelo_log <- lm(
+  area_log ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain + month + day,
+  data = datos.train
+)
+
+summary(modelo_log)
+```
+
+```{r}
+pred_orig <- predict(modelo_multiple_orig, newdata = datos.train)
+
+rmse_orig <- sqrt(mean((datos.train$area - pred_orig)^2))
+mae_orig  <- mean(abs(datos.train$area - pred_orig))
+
+rmse_orig
+mae_orig
+```
+
+```{r}
+pred <- predict(modelo_log, newdata = datos.train)
+
+rmse <- sqrt(mean((datos.train$area_log - pred)^2))
+
+mae <- mean(abs(datos.train$area_log - pred))
+
+rmse
+mae
+```
+
+El modelo de regresión con log(area+1) muestra una capacidad explicativa limitada (R² ajustado = 0.0456), indicando que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
+
+El test F no resulta significativo al nivel del 5% (p = 0.07142), aunque muestra cierta tendencia a serlo, lo que sugiere una capacidad explicativa global limitada.
+
+Solo algunas variables resultan significativas, como la temperatura (temp), la coordenada espacial X y el mes de diciembre, mientras que la mayoría no presentan efecto estadísticamente significativo.
+
+Esto sugiere la presencia de variables irrelevantes y posible multicolinealidad, por lo que es necesario aplicar técnicas de selección de variables o regularización para mejorar el modelo.
+
+El modelo con transformación logarítmica presenta un RMSE de 1.284 y un MAE de 1.043 (en escala logarítmica), mientras que el modelo sin transformación presenta un RMSE de 70.41 y un MAE de 19.48 en escala original. Aunque no son directamente comparables por estar en distintas escalas, la transformación logarítmica permite un mejor comportamiento del modelo en términos de ajuste y estabilidad.
+
+Aunque el error en escala logarítmica es moderado, esto es esperable dado el carácter complejo y altamente variable del dataset.
+
+El modelo predice el logaritmo del área quemada (log(area+1)), lo que permite modelar mejor la relación entre variables y estabilizar la varianza.
