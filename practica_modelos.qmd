@@ -1282,7 +1282,7 @@ Se consideran variables meteorológicas e índices de combustible para modelar e
 
 ```{r}
 # Modelo múltiple con todas las variables (área original)
-modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain, 
+modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain + month + day, 
                            data = datos.train)
 
 # Comparación de modelos
@@ -1294,13 +1294,13 @@ cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.
 summary(modelo_multiple_orig)
 ```
 
-El modelo de regresión lineal múltiple con la variable original presenta una capacidad explicativa muy limitada (R² ajustado = -0.017), indicando que las variables incluidas no aportan información útil para explicar el área quemada.
+El modelo de regresión lineal múltiple con la variable original presenta una capacidad explicativa muy limitada (R² ajustado = -0.04086), indicando que las variables incluidas no aportan información útil para explicar el área quemada.
 
-Además, el modelo en conjunto no resulta significativo (p-valor global = 0.8454), lo que refuerza la falta de relación entre las variables explicativas y la variable respuesta.
+Además, el modelo en conjunto no resulta significativo (p-valor global = 0.9319), lo que refuerza la falta de relación entre las variables explicativas y la variable respuesta.
 
 Ninguna de las variables resulta estadísticamente significativa, lo que sugiere que el modelo no es adecuado para explicar el área en su forma original.
 
-Por otro lado, el error estándar de los residuos es elevado (71.96), lo que indica una alta variabilidad en los errores y un bajo ajuste del modelo.
+Por otro lado, el error estándar de los residuos es elevado (72.79), lo que indica una alta variabilidad en los errores y un bajo ajuste del modelo.
 
 ### 2º Modelo: Todas las variables originales con la variable objetivo transformada.
 
