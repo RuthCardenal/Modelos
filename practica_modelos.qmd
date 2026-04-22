@@ -1351,3 +1351,53 @@ El modelo con transformación logarítmica presenta un RMSE de 1.284 y un MAE de
 Aunque el error en escala logarítmica es moderado, esto es esperable dado el carácter complejo y altamente variable del dataset.
 
 El modelo predice el logaritmo del área quemada (log(area+1)), lo que permite modelar mejor la relación entre variables y estabilizar la varianza.
+
+# 4. Modelos de regresión generalizada 
+
+```{r}
+# 1. Preparar el Target Binario (si no lo has hecho ya)
+datos.train$fuego <- ifelse(datos.train$area > 0, 1, 0)
+datos.train$fuego <- as.factor(ifelse(datos.train$fuego == 1, "present", "absent")) # Lo ponemos como texto para caret
+
+# 2. Ajustar el Modelo Completo
+# Usamos todas las variables para predecir si hay o no fuego
+glm_fuego <- glm(fuego ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain, 
+                family = binomial("logit"), data = datos.train)
+summary(glm_fuego)
+
+# 3. Bondad de Ajuste Global (Prueba de Desviación)
+# ¿Es el modelo mejor que uno vacío?
+deviance_diff <- glm_fuego$null.deviance - glm_fuego$deviance
+df_diff <- glm_fuego$df.null - glm_fuego$df.residual
+p_val_global <- 1 - pchisq(deviance_diff, df = df_diff)
+cat("P-valor del test global:", p_val_global, "\n")
+
+# 4. Selección Automática de Variables (Paso a paso)
+# Esto te dará el "Mejor Modelo" para el Punto 4
+glm_fuego_opt <- step(glm_fuego, direction = "both")
+
+# 5. Evaluación con Matriz de Confusión (En datos de TEST para mayor rigor)
+# Primero preparamos los datos de test igual que los de train
+datos.test$fuego <- as.factor(ifelse(datos.test$area > 0, "present", "absent"))
+
+# Predicciones
+preds_prob <- predict(glm_fuego_opt, newdata = datos.test, type = 'response')
+preds_clase <- factor(ifelse(preds_prob > 0.5, 'present', 'absent'), levels = c("absent", "present"))
+
+# Matriz de Confusión
+library(caret)
+confusionMatrix(preds_clase, datos.test$fuego, positive = 'present', mode = 'everything')
+
+# 6. Interpretación: Odds Ratios
+# Esto es vital para tu informe. Dice cuánto aumenta el riesgo de incendio por cada variable.
+odds_ratios <- exp(coef(glm_fuego_opt))
+print("Odds Ratios (Riesgo relativo):")
+print(odds_ratios)
+
+# 7. Diagnóstico de Residuos (Binned Plots)
+# Para logística no se usan los residuos normales, se usan "binned residuals"
+library(arm)
+binnedplot(fitted(glm_fuego_opt), 
+           residuals(glm_fuego_opt, type = 'response'), 
+           main = "Binned residual plot (Modelo Logístico)")
+```
