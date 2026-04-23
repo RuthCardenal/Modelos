@@ -211,6 +211,12 @@ p2 <- ggplot(data = datos.train, aes(x = Y)) +
 p1 + p2 + plot_annotation(title = "Distribución de la Frecuencia de Incendios por Coordenadas Espaciales (X, Y)")
 ```
 
+El análisis geoespacial revela que la distribución de los incendios no es uniforme, identificando un hotspot crítico en el sector centro-occidental del parque, específicamente en las coordenadas (4,4) y (4,5). Mientras que las zonas periféricas muestran una actividad mínima, la naturaleza multimodal de los datos en el eje horizontal y su concentración central en el vertical demuestran que la ubicación geográfica es un predictor clave del riesgo de ignición.
+
+Esta asimetría justifica que el modelo priorice la posición espacial por encima de factores puramente climáticos, permitiendo localizar los puntos de mayor recurrencia para optimizar la prevención en las áreas más vulnerables.
+
+*Nota técnica sobre la identificación del hotspot:* La determinación del punto crítico en las coordenadas (4,4) y (4,5) se deriva del análisis de frecuencias marginales. Al observar los histogramas, se identifica que la coordenada X=4 representa la moda absoluta del eje horizontal (máxima densidad de igniciones), mientras que el intervalo Y=\[4,5\] concentra el mayor volumen de datos en el eje vertical. La intersección de estos valores máximos define un área de influencia geoespacial donde la probabilidad de ocurrencia es significativamente superior al resto del parque, validando la importancia de estas coordenadas como predictores de peso en el modelo.
+
 ```{r}
 
 
@@ -272,6 +278,18 @@ grafico_isi <- ggplot(data = datos.train, aes(x = ISI)) +
   )
   
 ```
+
+-   El índice **FFMC** presenta una distribución con un marcado sesgo a la izquierda, lo que estadísticamente se traduce en una cola larga hacia los valores bajos y una gran acumulación de datos, o moda, en el rango superior a 90. Esto nos indica que existe un "umbral de activación" crítico; es decir, la probabilidad de que un incendio prospere no es lineal, sino que se dispara casi exclusivamente cuando el combustible fino superficial alcanza niveles extremos de sequedad. Esta variable actúa prácticamente como un interruptor de riesgo, donde la variabilidad significativa para entender el fenómeno se concentra en el margen entre 90 y 96, invalidando el peso de los registros inferiores que representan situaciones donde la ignición es físicamente improbable debido a la humedad del mantillo.
+
+-   En el caso del **DMC**, se observa una distribución multimodal con picos de frecuencia claramente diferenciados en torno a los valores 25, 100 y 150. Esta característica indica que los incendios analizados no responden a un único patrón de sequía, sino que se agrupan en distintos escenarios meteorológicos. Mientras que los picos de valores bajos representan igniciones en condiciones de humedad moderada, los picos situados en niveles superiores reflejan incendios ocurridos tras periodos de sequía prolongada que han afectado a las capas orgánicas medias del suelo y a los materiales leñosos de pequeño tamaño. Esta estructura multimodal permite identificar diversos grados de severidad potencial, distinguiendo entre incendios de rápida extinción y aquellos con mayor persistencia y dificultad de control.
+
+-   La distribución del índice **DC** se caracteriza por una acumulación de registros en el extremo superior de la escala, situándose la gran mayoría entre los 600 y 800 puntos. Este patrón indica que casi la totalidad de los incendios del dataset ocurrieron bajo condiciones de déficit hídrico extremo en las capas más profundas y compactas del suelo orgánico; representa una sequía estructural que solo se alcanza tras meses sin precipitaciones significativas. Al verse afectadas las capas de mayor densidad, el sistema presenta una disponibilidad máxima de combustible pesado, lo que aumenta la severidad del incendio y favorece una combustión más persistente una vez que se produce la ignición. Esta reducción de la humedad en el combustible profundo consolida un escenario de alta intensidad, donde la duración de la combustión se prolonga significativamente respecto a condiciones de mayor hidratación del suelo.
+
+-   El índice **ISI** muestra una distribución asimétrica positiva con una cola muy extendida hacia la derecha, donde la mayor parte de los registros se agrupan en valores bajos, entre 0 y 15, pero con casos aislados que llegan a alcanzar los 40 puntos. Esta forma gráfica confirma que, aunque la dinámica habitual de los incendios en este entorno es de propagación lenta o moderada, el sistema está sujeto a eventos extremos impulsados por rachas de viento y sequedad extrema que disparan la velocidad de avance. La gestión de esta alta varianza es vital, ya que esos valores atípicos de la cola derecha representan los escenarios de mayor peligro potencial, donde el control del incendio se vuelve extremadamente complejo.
+
+#### **Conclusión del Análisis de Índices FWI**
+
+El comportamiento conjunto de estos indicadores revela una **dependencia jerárquica y funcional** basada en el estado del combustible forestal. El **FFMC** actúa como el factor crítico de ignición, determinando la facilidad con la que se inicia el fuego en la superficie, mientras que el **DMC** y el **DC** establecen la carga energética disponible al marcar la sequía en las capas intermedias y profundas. Al verse afectadas estas capas de mayor densidad, el sistema presenta una disponibilidad máxima de combustible pesado, lo que aumenta la severidad del incendio y favorece una combustión más persistente una vez que se produce la ignición. Esta reducción de la humedad en el combustible profundo consolida un escenario de alta intensidad, donde la duración de la combustión se prolonga significativamente en comparación con estados de mayor hidratación del suelo. Finalmente, el **ISI** integra estas condiciones de sequedad con la dinámica atmosférica para definir la cinética de propagación, confirmando que la magnitud del incendio depende de la sincronización entre la facilidad de inicio, la energía acumulada en la biomasa y el potencial de avance del frente de fuego.
 
 #### Análisis de la variable numérica 'temp':
 
@@ -1251,28 +1269,141 @@ print(reset_resultado)
 
 ### Entre 'temp' y 'area_log'
 
+#### Estudiamos si existe relación lineal entre 'temp' y 'area_log'
+
 ```{r}
-datos_grafico <- datos.train %>%
-  mutate(temp_rango = cut(temp, 
-                          breaks = seq(0, 35, by = 5), 
-                          include.lowest = TRUE)) %>%
-  group_by(temp_rango) %>%
-  summarise(area_total = mean(area_log, na.rm = TRUE)) %>%
-  filter(!is.na(temp_rango))
-
-ggplot(datos_grafico, aes(x = temp_rango, y = area_total, fill = as.numeric(temp_rango))) +
-  geom_col(color = "white", lwd = 0.2) + 
-  coord_flip() + 
-
-  scale_fill_gradient(low = "#fee5d9", high = "#67000d") + 
-  labs(title = "Relación entre Temperatura y Superficie Quemada",
-       subtitle = "La anchura de la barra indica el promedio de área ",
-       x = "Rango de Temperatura (°C)",
-       y = "Superficie Quemada ",
-       fill = "Intensidad de Temp") +
-  theme_minimal() +
-  theme(panel.grid.minor = element_blank())
+plot(datos.train$temp, datos.train$area_log,
+     main = "Diagrama de dispersión entre temp y area_log",
+     xlab = "Temperatura (°C)",
+     ylab = "log(area + 1)",
+     pch = 19, col = "steelblue")
 ```
+
+El diagrama muestra una correlación positiva donde el incremento de la temperatura amplía el rango máximo de superficie quemada, especialmente al superar los 20°C. No obstante, la alta dispersión de los datos indica que el calor actúa más como un factor habilitador que como un predictor exacto, ya que existen numerosos incendios de pequeña magnitud bajo condiciones térmicas elevadas. Esta falta de ajuste lineal perfecto sugiere que la temperatura incrementa la probabilidad de eventos severos, pero requiere de la interacción con otras variables para determinar el área final afectada.
+
+#### Ajustamos un modelo de regresión lineal simple
+
+```{r}
+set.seed(456)
+modelo_temp <- lm(area_log ~ temp, data = datos.train)
+
+summary(modelo_temp)
+
+coeficientes <- coef(modelo_temp)
+cat('Intercept beta0 es ', round(coeficientes[1],2), '\n')
+cat('El valor de la pendiente beta1 es ', round(coeficientes[2],2), '\n')
+```
+
+Los resultados del modelo de regresión lineal para la temperatura muestran que esta variable, analizada de forma individual, carece de capacidad predictiva sobre el área quemada. Con un p-valor de 0.467, la temperatura no resulta estadísticamente significativa, y el R² ajustado de -0.0018 confirma que el modelo no aporta información útil para explicar la variabilidad observada. En la práctica, un valor negativo en el R² ajustado indica que la variable introducida explica menos varianza de la que se esperaría por puro azar, reforzando que un modelo lineal simple no es suficiente para capturar la magnitud de los incendios basándose únicamente en esta métrica.
+
+#### Visualización del modelo ajustado
+
+```{r}
+# Gráfico con línea de regresión y bandas de confianza
+ggplot(datos.train, aes(x = temp, y = area_log)) +
+  geom_point(size = 3, alpha = 0.7, color = "steelblue") +
+  geom_smooth(method = "lm", se = TRUE, color = "red", fill = "pink", alpha = 0.3) +
+  labs(title = "Modelo de Regresión: Temperatura vs Área (log)",
+       x = "Temperatura (°C)",
+       y = "Área (escala logarítmica)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold"))
+
+```
+
+La visualización confirma gráficamente la falta de significancia del modelo lineal. La línea de regresión (en rojo) aparece prácticamente horizontal, lo que refuerza que no existe una tendencia clara de incremento del área quemada respecto a la temperatura. Asimismo, la banda de confianza (en rosa) es notablemente ancha en comparación con la pendiente, indicando una alta incertidumbre en la estimación. La enorme dispersión de los puntos alrededor de la recta y el valor negativo del R² ajustado demuestran que la temperatura, por sí sola, es un predictor ineficaz para la magnitud de los incendios en este ajuste lineal.
+
+Vamos a obtener también los intervalos de confianza de los parámetros $\beta$:
+
+```{r}
+ic_temp <- confint(modelo_temp)
+ic_temp
+```
+
+El intervalo de confianza al 95% para el coeficiente de la temperatura comprende valores entre -0.0189 y 0.0412. Al incluir el valor cero dentro de este rango, se confirma estadísticamente que no existe evidencia suficiente para afirmar que la temperatura tenga un efecto real (distinto de cero) sobre el área quemada. Esto refuerza el p-valor obtenido anteriormente y valida que la relación observada es compatible con el azar.
+
+```{r}
+summary(modelo_temp)$r.squared
+```
+
+El coeficiente de determinación es de 0.00206, lo que indica que la temperatura solo es capaz de explicar un 0.2% de la variabilidad del área quemada (en escala logarítmica). Este valor es extremadamente bajo, lo que demuestra que, aunque la temperatura sea un factor físico relevante en la propagación de incendios, por sí sola carece de fuerza predictiva en este modelo lineal simple.
+
+#### Diagnosis del modelo
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+# Extraer información del modelo
+residuos <- residuals(modelo_temp)
+valores_ajustados <- fitted(modelo_temp)
+residuos_std <- rstandard(modelo_temp)
+residuos_stud <- rstudent(modelo_temp)
+leverage_vals <- hatvalues(modelo_temp)
+
+# 1. Residuos vs Ajustados
+p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Residuos vs Ajustados", x = "Valores ajustados", y = "Residuos") +
+  theme_classic()
+
+# 2. Q-Q Plot
+p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
+  geom_qq(alpha = 0.7, color = "steelblue") +
+  geom_qq_line(color = "red") +
+  labs(title = "Q-Q Plot") +
+  theme_classic()
+
+# 3. Scale-Location
+p3 <- ggplot(data.frame(x = valores_ajustados, y = sqrt(abs(residuos_std))), aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Scale-Location", x = "Valores ajustados", y = "√|Residuos std|") +
+  theme_classic()
+
+# 4. Residuos vs Leverage
+p4 <- ggplot(data.frame(leverage = leverage_vals, residuos_stud = residuos_stud), aes(x = leverage, y = residuos_stud)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
+  labs(title = "Residuos vs Leverage", x = "Leverage", y = "Res. estudentizados") +
+  theme_classic()
+
+# 5. Histograma de residuos
+p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "lightblue", color = "black", alpha = 0.7) +
+  stat_function(fun = dnorm, args = list(mean = mean(residuos), sd = sd(residuos)), color = "red") +
+  labs(title = "Histograma de residuos") +
+  theme_classic()
+
+# 6. Residuos vs Orden
+p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos), aes(x = orden, y = residuos)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_line(alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuos vs Orden") +
+  theme_classic()
+
+grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
+```
+
+El gráfico de residuos frente a los valores ajustados presenta una ligera curvatura en los extremos, lo que sugiere que la relación lineal no es perfecta, aunque la línea se mantiene cerca de cero en la mayor parte del rango. Respecto a la homocedasticidad, el gráfico Scale-Location muestra una dispersión relativamente estable, sin un patrón de embudo claro, lo que permite asumir que la varianza es aproximadamente constante.
+
+Por otro lado, el Q-Q Plot y el Histograma revelan desviaciones en la normalidad de los residuos, especialmente en la cola superior.
+
+En consecuencia, estas anomalías en la distribución de los errores, sumadas a la ausencia de relevancia estadística, indican que el modelo es poco robusto. Esto invalida su capacidad para generar pronósticos precisos, sugiriendo que la temperatura no debe utilizarse como único motor de predicción en este contexto.
+
+**Test RESET de Ramsey**
+
+```{r}
+suppressPackageStartupMessages(library(lmtest))
+reset_resultado <- resettest(modelo_temp, power = 2:3, type = "fitted")
+print(reset_resultado)
+```
+
+El test RESET de Ramsey arroja un p-valor de **0.07298**, el cual es ligeramente superior al nivel de significancia estándar ($\alpha = 0.05$). Al no ser estadísticamente significativo, no se puede rechazar la hipótesis nula, lo que sugiere que la forma funcional lineal del modelo es aceptable y no existe una mala especificación grave. Sin embargo, al estar el valor tan cerca del límite de rechazo, se confirma que el ajuste es débil y que la relación lineal entre temperatura y área quemada es insuficiente para realizar estimaciones de confianza.
 
 ## Modelos líneales múltiples
 
@@ -1352,7 +1483,7 @@ Aunque el error en escala logarítmica es moderado, esto es esperable dado el ca
 
 El modelo predice el logaritmo del área quemada (log(area+1)), lo que permite modelar mejor la relación entre variables y estabilizar la varianza.
 
-# 4. Modelos de regresión generalizada 
+# 4. Modelos de regresión generalizada
 
 ```{r}
 # 1. Preparar el Target Binario (si no lo has hecho ya)
