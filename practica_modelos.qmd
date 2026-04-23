@@ -10,8 +10,6 @@ format:
 editor: visual
 ---
 
-//en regularización estandarizar. En múltiple estandarizar depende del resultado.
-
 # 1. PRESENTACIÓN Y DESCRIPCIÓN DEL DATASET
 
 Dataset: <https://archive.ics.uci.edu/dataset/162/forest+fires>
@@ -84,6 +82,8 @@ library(corrplot)
 library(modeest)
 library(moments)
 library(dplyr)
+library(reshape2)
+library(gridExtra)
 ```
 
 Inicialmente, planteamos repartir las particiones de forma equitativa entre todos los meses del año. Sin embargo, la alta concentración de incendios en verano descompensaba los datos. Para corregir este sesgo y optimizar el proceso, decidimos agrupar los meses en dos bloques estacionales: frío y calor. De esta manera, pudimos generar los conjuntos de entrenamiento, validación y prueba de forma aleatoria y mucho más eficiente.
@@ -91,8 +91,9 @@ Inicialmente, planteamos repartir las particiones de forma equitativa entre todo
 ##### DIVISIÓN CALOR-FRÍO:
 
 ```{r}
-#-- Creamos ambos vectores.
+set.seed(2138) #--- semilla
 
+#-- Creamos ambos vectores.
 calor <- c("jun", "jul", "aug", "sep")
 frio  <- c("jan", "feb", "mar", "apr", "may", "oct", "nov", "dec")
 
@@ -113,8 +114,6 @@ View(datos)
 ##### PARTICIONES (TRAIN, TEST Y VALIDACIÓN):
 
 ```{r}
-
-set.seed(2138) #--- semilla
 n <- nrow(datos) #-- n = número de filas 
 indices_disponibles <- 1:n # índices disponibles = número de filas.
 
@@ -164,9 +163,9 @@ str (datos.train)
 tibble(datos.train)
 ```
 
-Este primer vistazo a los datos muestra que el dataset está compuesto principalmente por variables numéricas continuas relacionadas con condiciones meteorológicas y de riesgo de incendio, junto con algunas variables categóricas como el mes y el día. Se observa que existen diferencias importantes en las escalas de algunas variables y una fuerte asimetría en la variable objetivo 'area', con muchos valores bajos o nulos y algunos muy elevados. Además, variables como 'rain' presentan poca variabilidad. Por ello, será necesario considerar transformaciones en ciertas variables para evitar sesgos en el modelado y mejorar la interpretación de los resultados.
+Este primer vistazo a los datos muestra que el dataset está compuesto principalmente por variables numéricas continuas relacionadas con condiciones meteorológicas y de riesgo de incendio, junto con algunas variables categóricas como el mes y el día. Se observa que existen diferencias importantes en las escalas de algunas variables y una fuerte asimetría en la variable objetivo $area$, con muchos valores bajos o nulos y algunos muy elevados. Además, variables como $rain$ presentan poca variabilidad. Por ello, será necesario considerar transformaciones en ciertas variables para evitar sesgos en el modelado y mejorar la interpretación de los resultados.
 
-Por otro lado, se convierten las variables 'month' y 'day' a factores porque la conversión a factores permite que los modelos generen variables dummy y traten correctamente la naturaleza cualitativa de estas variables.
+Por otro lado, se convierten las variables $month$ y $day$ a factores porque la conversión a factores permite que los modelos generen variables dummy y traten correctamente la naturaleza cualitativa de estas variables.
 
 ```{r}
 datos.train$month <- as.factor(datos.train$month)
@@ -218,8 +217,6 @@ Esta asimetría justifica que el modelo priorice la posición espacial por encim
 *Nota técnica sobre la identificación del hotspot:* La determinación del punto crítico en las coordenadas (4,4) y (4,5) se deriva del análisis de frecuencias marginales. Al observar los histogramas, se identifica que la coordenada X=4 representa la moda absoluta del eje horizontal (máxima densidad de igniciones), mientras que el intervalo Y=\[4,5\] concentra el mayor volumen de datos en el eje vertical. La intersección de estos valores máximos define un área de influencia geoespacial donde la probabilidad de ocurrencia es significativamente superior al resto del parque, validando la importancia de estas coordenadas como predictores de peso en el modelo.
 
 ```{r}
-
-
 # --- GRÁFICO 1: FFMC ---
 grafico_ffmc <- ggplot(data = datos.train, aes(x = FFMC)) +
   # El histograma debe estar en escala de 'density' para que la línea quepa
@@ -404,7 +401,6 @@ boxplot(datos.train$rain,
 #### Análisis de la variable numérica 'area':
 
 ```{r}
-
 hist(datos.train$area, 
      breaks = 100, 
      main = "Distribución del Área Quemada", 
@@ -426,8 +422,6 @@ datos.train$area_log <- log1p(datos.train$area)
 Comparamos ambas gráficas:
 
 ```{r}
-library(ggplot2)
-
 # Antes
 ggplot(datos.train, aes(x = area)) +
   geom_histogram(bins = 30, fill = "steelblue", color = "white") +
@@ -491,7 +485,6 @@ ggplot(datos.train, aes(x = day, fill = day)) +
 #### Relación entre el mes y el área quemada (escala logarítmica).
 
 ```{r}
-
 ggplot(datos.train, aes(x = month, y = area_log, fill = month)) +
   geom_bar(stat = "summary", fun = "mean") +
   labs(title = "Área quemada promedio por mes (escala logarítmica)",
@@ -505,8 +498,6 @@ ggplot(datos.train, aes(x = month, y = area_log, fill = month)) +
 #### Relación entre la temperatura y el área quemada (escala logarítmica).
 
 ```{r}
-library(ggplot2)
-
 ggplot(datos.train, aes(x = temp, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -523,8 +514,6 @@ Sin embargo, la dispersión de los datos es elevada y no se observa un patrón c
 #### Relación entre la húmedad relativa y el área quemada (escala logarítmica).
 
 ```{r}
-library(ggplot2)
-
 ggplot(datos.train, aes(x = RH, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -541,8 +530,6 @@ Sin embargo, la dispersión de los datos es elevada y no se observa un patrón c
 #### Relación entre la lluvia y el área quemada (escala logarítmica).
 
 ```{r}
-library(ggplot2)
-
 ggplot(datos.train, aes(x = rain, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -559,7 +546,6 @@ La línea de tendencia presenta una ligera pendiente negativa, lo que podría su
 #### Relación entre la velocidad del viento y el área quemada (escala logarítmica).
 
 ```{r}
-library(ggplot2)
 ggplot(datos.train, aes(x = wind, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -572,9 +558,6 @@ ggplot(datos.train, aes(x = wind, y = area_log)) +
 #### Relación entre FFMC y el área quemada (escala logarítmica).
 
 ```{r}
-
-library(ggplot2)
-
 ggplot(datos.train, aes(x = FFMC, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -591,7 +574,6 @@ La tendencia es positiva: cuanto más seco está el material, mayor puede ser el
 #### Relación entre DMC y el área quemada (escala logarítmica).
 
 ```{r}
-library(ggplot2)
 ggplot(datos.train, aes(x = DMC, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +  # Cambié a rojo oscuro para diferenciarlo del FFMC
   geom_smooth(method = "lm", se = FALSE, color = "red") + # Línea de tendencia en azul
@@ -609,7 +591,6 @@ Sin embargo, los incendios más grandes suelen aparecer cuando el DMC es alto, l
 #### Relación entre DC y el área quemada (escala logarítmica).
 
 ```{r}
-library(ggplot2)
 ggplot(datos.train, aes(x = DC, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) + 
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -627,7 +608,6 @@ Esto significa que el DC no inicia el fuego, pero sí crea las condiciones para 
 #### Relación entre ISI y el área quemada (escala logarítmica).
 
 ```{r}
-library(ggplot2)
 ggplot(datos.train, aes(x = ISI, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) + 
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -647,7 +627,6 @@ En resumen, la relación negativa no es real: el ISI sí influye en la propagaci
 #### Relación entre la temperatura y la húmedad relativa.
 
 ```{r}
-library(ggplot2)
 ggplot(datos.train, aes(x = temp, y = RH)) +
   geom_point(color = "steelblue", alpha = 0.5) + 
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -665,7 +644,6 @@ La zona más peligrosa aparece con temperaturas altas (más de 25°C) y humedad 
 #### Relación entre la velocidad del viento e ISI.
 
 ```{r}
-library(ggplot2)
 ggplot(datos.train, aes(x = wind, y = ISI)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -683,7 +661,6 @@ Sin embargo, hay un valor atípico muy alto que no sigue esta tendencia y puede 
 #### Relación entre DMC Y DC.
 
 ```{r}
-library(ggplot2)
 ggplot(datos.train, aes(x = DMC, y = DC)) +
   geom_point(color = "steelblue", alpha = 0.5) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
@@ -761,8 +738,6 @@ Por último, destaca una correlación negativa moderada entre la temperatura y l
 #### Heatmap de correlación
 
 ```{r}
-library(ggplot2)
-library(reshape2)
 
 # Seleccionar variables numéricas
 vars_num <- datos.train[, c("FFMC", "DMC", "DC", "ISI", 
@@ -836,7 +811,6 @@ El diagrama de dispersión no muestra una relación lineal clara entre la humeda
 #### Ajustamos un modelo de regresión lineal simple
 
 ```{r}
-set.seed(456)
 modelo <- lm(area_log ~ RH, data = datos.train)
 
 summary(modelo)
@@ -882,8 +856,6 @@ Además, dado que el p-valor de RH es 0.11 \> 0.05, no existe evidencia suficien
 #### Diagnosis del modelo
 
 ```{r}
-library(ggplot2)
-library(gridExtra)
 
 # Extraer información del modelo
 residuos <- residuals(modelo)
@@ -1001,7 +973,7 @@ En conclusión, aunque el modelo puede considerarse aproximadamente lineal, no r
 
 ### Entre 'ISI' y 'area_log'
 
-#### Estudiamos si existe relación lineal entre 'RH' y 'area_log'
+#### Estudiamos si existe relación lineal entre 'ISI' y 'area_log'
 
 ```{r}
 plot(datos.train$ISI, datos.train$area_log,
@@ -1011,9 +983,7 @@ plot(datos.train$ISI, datos.train$area_log,
      pch = 19, col = "steelblue")
 ```
 
-interpretación: El ISI nos dice qué tan rápido podría propagarse un incendio según el viento y la sequedad, pero los datos muestran que esto no garantiza que el incendio sea grande. La mayoría de los incendios terminan siendo pequeños, aunque el ISI sea alto, y algunos incendios grandes ocurrieron con ISI bajo. La correlación casi nula entre ISI y el área final quemada confirma que ningún factor meteorológico por sí solo predice el tamaño de un incendio. Por eso, para entender y predecir la magnitud real de los incendios, se necesitan modelos más complejos o de Machine Learning, que puedan capturar cómo varios factores interactúan juntos.
-
-Ajustamos un modelo de regresión lineal simple
+El ISI nos dice qué tan rápido podría propagarse un incendio según el viento y la sequedad, pero los datos muestran que esto no garantiza que el incendio sea grande. La mayoría de los incendios terminan siendo pequeños, aunque el ISI sea alto, y algunos incendios grandes ocurrieron con ISI bajo. La correlación casi nula entre ISI y el área final quemada confirma que ningún factor meteorológico por sí solo predice el tamaño de un incendio. Por eso, para entender y predecir la magnitud real de los incendios, se necesitan modelos más complejos o de Machine Learning, que puedan capturar cómo varios factores interactúan juntos.
 
 #### Ajustamos un modelo de regresión lineal simple
 
@@ -1026,7 +996,7 @@ cat('Intercepto beta0 es ', round(coeficientes[1],2), '\n')
 cat('Pendiente beta1 (ISI) es ', round(coeficientes[2],2), '\n')
 ```
 
-Interpretación: Los resultados del modelo de regresión lineal simple indican que el Índice de Propagación Inicial (ISI) no presenta una relación significativa con el área quemada. En concreto, el p-valor asociado al ISI (0.122) es superior al nivel de significancia habitual (α = 0.05), lo que implica que no existe evidencia estadística suficiente para afirmar que esta variable influya de manera lineal en la magnitud del incendio.
+Los resultados del modelo de regresión lineal simple indican que el Índice de Propagación Inicial (ISI) no presenta una relación significativa con el área quemada. En concreto, el p-valor asociado al ISI (0.122) es superior al nivel de significancia habitual (α = 0.05), lo que implica que no existe evidencia estadística suficiente para afirmar que esta variable influya de manera lineal en la magnitud del incendio.
 
 Asimismo, el coeficiente de determinación (R² ≈ 0.009) muestra que el modelo apenas explica un 1% de la variabilidad observada, lo que confirma su escasa capacidad predictiva. Aunque el coeficiente estimado para el ISI es negativo, este resultado no es fiable desde el punto de vista estadístico y puede atribuirse al ruido presente en los datos.
 
@@ -1052,13 +1022,11 @@ ic_isi<-confint(modelo_isi)
 ic_isi
 ```
 
-Interpretación: Para confirmar la falta de relación entre el ISI y el área quemada, se analizaron los intervalos de confianza al 95% de los coeficientes del modelo. En el caso del ISI, el intervalo obtenido es \[−0.0596,0.0071\]. Dado que este intervalo incluye el valor cero, se concluye que no hay evidencia suficiente para afirmar que el ISI tenga un efecto real sobre el área quemada.
+Para confirmar la falta de relación entre el ISI y el área quemada, se analizaron los intervalos de confianza al 95% de los coeficientes del modelo. En el caso del ISI, el intervalo obtenido es \[−0.0596,0.0071\]. Dado que este intervalo incluye el valor cero, se concluye que no hay evidencia suficiente para afirmar que el ISI tenga un efecto real sobre el área quemada.
 
 En términos simples, esto significa que no se puede asegurar que el ISI influya en el tamaño del incendio, ya que su impacto podría ser incluso nulo. Por tanto, esta variable no aporta información relevante al modelo, y cualquier pequeña variación observada en su coeficiente se debe al azar o al ruido de los datos, y no a una relación real entre las variables.
 
 #### Diagnosis del modelo
-
-**1. Linealidad (Residuos vs Ajustados):**
 
 ```{r}
 # Asegúrate de haber definido el modelo antes
@@ -1157,7 +1125,7 @@ Estos resultados indican que las inferencias estadísticas (intervalos de confia
 
 Mediante el gráfico de Residuos vs. Leverage, se identificó un punto con un nivel de apalancamiento superior a $0.3$, lo cual es considerablemente alto en comparación con el resto de la muestra. Este dato actúa como un punto influyente que podría estar sesgando los coeficientes del modelo. Adicionalmente, el gráfico de Residuos vs. Orden detecta varios valores atípicos (outliers) que superan las 4 unidades de residuo, afectando la estabilidad del ajuste.
 
-Estudio del outlier:
+#### Estudio del outlier:
 
 ```{r}
 # 1. Identificar las filas con alto leverage
@@ -1188,11 +1156,6 @@ print(tabla_leverage)
 # Quitamos los dos grandes sospechosos
 datos_limpios <- datos.train[-169,]
 modelo_limpio <- lm(area_log ~ ISI, data = datos_limpios)
-
-# --- A partir de aquí, usamos 'modelo_limpio' para las gráficas ---
-
-library(ggplot2)
-library(gridExtra)
 
 # Extraer información del nuevo modelo
 residuos <- residuals(modelo_limpio)
@@ -1260,8 +1223,6 @@ Por lo tanto, se pueden interpretar los resultados del modelo, aunque conviene h
 ```{r}
 suppressPackageStartupMessages(library(lmtest))
 
-# Test RESET para tu modelo de incendios
-# Cambiamos 'modelo_mpg' por tu objeto de modelo real
 reset_resultado <- resettest(modelo_limpio, power = 2:3, type = "fitted")
 
 print(reset_resultado)
@@ -1331,8 +1292,6 @@ El coeficiente de determinación es de 0.00206, lo que indica que la temperatura
 #### Diagnosis del modelo
 
 ```{r}
-library(ggplot2)
-library(gridExtra)
 
 # Extraer información del modelo
 residuos <- residuals(modelo_temp)
@@ -1483,12 +1442,55 @@ Aunque el error en escala logarítmica es moderado, esto es esperable dado el ca
 
 El modelo predice el logaritmo del área quemada (log(area+1)), lo que permite modelar mejor la relación entre variables y estabilizar la varianza.
 
+**VIF**
+
+```{r}
+# Cargar la librería necesaria
+suppressPackageStartupMessages(library(car))
+
+# 1. Selección de variables predictoras (ajusta los nombres a tus columnas)
+# Usaremos las que hemos analizado: RH, ISI, temp y quizá las de sequedad (DC, DMC)
+# IMPORTANTE: No incluyas la variable objetivo 'area_log' aquí dentro.
+predictores <- datos.train[, c("RH", "ISI", "temp", "DC", "DMC")] 
+
+# 2. Análisis de varianza (opcional pero recomendado)
+# Detecta si alguna variable es casi constante
+varianzas <- apply(predictores, 2, var)
+print("Varianzas de los predictores:")
+print(round(varianzas, 4))
+
+# 3. Cálculo del VIF
+# Creamos un modelo lineal que use todas las variables seleccionadas
+modelo_vif <- lm(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)
+
+# Calculamos los valores VIF
+vif_valores <- vif(modelo_vif)
+
+# 4. Mostrar resultados de forma limpia
+print("Valores VIF:")
+print(round(vif_valores, 2))
+
+# 5. Interpretación automática
+vif_summary <- data.frame(
+  Variable = names(vif_valores),
+  VIF = round(vif_valores, 2),
+  Estado = ifelse(vif_valores > 10, "ALTO (Crítico)", 
+           ifelse(vif_valores > 5, "Moderado", "Bajo (Aceptable)"))
+)
+print(vif_summary)
+```
+
+Para garantizar la estabilidad de los coeficientes del modelo multivariante, se ha calculado el **Factor de** Todos los valores VIF se encuentran significativamente por debajo del umbral crítico de **5** (y muy lejos del límite de 10). Esto indica que no existe multicolinealidad entre los predictores.
+
+```{r}
+
+```
+
 # 4. Modelos de regresión generalizada
 
 ```{r}
-# 1. Preparar el Target Binario (si no lo has hecho ya)
 datos.train$fuego <- ifelse(datos.train$area > 0, 1, 0)
-datos.train$fuego <- as.factor(ifelse(datos.train$fuego == 1, "present", "absent")) # Lo ponemos como texto para caret
+datos.train$fuego <- as.factor(ifelse(datos.train$fuego == 1, "present", "absent")) 
 
 # 2. Ajustar el Modelo Completo
 # Usamos todas las variables para predecir si hay o no fuego
