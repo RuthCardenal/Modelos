@@ -1482,9 +1482,40 @@ print(vif_summary)
 
 Para garantizar la estabilidad de los coeficientes del modelo multivariante, se ha calculado el **Factor de** Todos los valores VIF se encuentran significativamente por debajo del umbral crítico de **5** (y muy lejos del límite de 10). Esto indica que no existe multicolinealidad entre los predictores.
 
+Lasso
+
 ```{r}
+library(glmnet)
+
+# 1. Preparar las matrices
+X <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)[, -1]
+Y <- datos.train$area_log
+
+# 2. EJECUTAR RIDGE (alpha = 0)
+set.seed(123)
+cv_ridge <- cv.glmnet(X, Y, alpha = 0) 
+
+# 3. EJECUTAR LASSO (alpha = 1)
+set.seed(123)
+cv_lasso <- cv.glmnet(X, Y, alpha = 1)
+
+# 4. EJECUTAR OLS (Regresión normal para comparar)
+modelo_ols <- lm(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)
+
+# 5. CREAR LA TABLA COMPARATIVA
+# Ahora sí, todos los objetos (modelo_ols, cv_ridge y cv_lasso) existen
+output <- cbind(
+  OLS   = round(coef(modelo_ols), 3),
+  RIDGE = round(as.matrix(coef(cv_ridge, s = "lambda.min")), 3),
+  LASSO = round(as.matrix(coef(cv_lasso, s = "lambda.min")), 3)
+)
+
+# 6. Ver el resultado
+print(output)
 
 ```
+
+Los resultados de Lasso funcionan como un mecanismo de selección automática de variables: al aplicar la penalización óptima, el modelo ha reducido exactamente a cero los coeficientes de temp, DC y DMC. Esto indica que estas variables no aportan información predictiva relevante para el área quemada y pueden ser descartadas. En consecuencia, Lasso simplifica la estructura del modelo dejando únicamente a la humedad relativa (RH) y al índice ISI como predictores activos, lo que genera un modelo más robusto y menos propenso al ruido.
 
 # 4. Modelos de regresión generalizada
 
