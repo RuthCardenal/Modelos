@@ -1364,6 +1364,35 @@ print(reset_resultado)
 
 El test RESET de Ramsey arroja un p-valor de **0.07298**, el cual es ligeramente superior al nivel de significancia estándar ($\alpha = 0.05$). Al no ser estadísticamente significativo, no se puede rechazar la hipótesis nula, lo que sugiere que la forma funcional lineal del modelo es aceptable y no existe una mala especificación grave. Sin embargo, al estar el valor tan cerca del límite de rechazo, se confirma que el ajuste es débil y que la relación lineal entre temperatura y área quemada es insuficiente para realizar estimaciones de confianza.
 
+Elección modelo simple:
+
+```{r}
+# Función para extraer métricas de un modelo lineal
+obtener_metricas <- function(modelo) {
+  s <- summary(modelo)
+  rmse <- sqrt(mean(modelo$residuals^2))
+  mae <- mean(abs(modelo$residuals))
+  r2_adj <- s$adj.r.squared
+  return(c(RMSE = rmse, MAE = mae, R2_Adj = r2_adj))
+}
+
+# Ajustamos los tres modelos individuales
+mod_rh   <- lm(area_log ~ RH, data = datos.train)
+mod_isi  <- lm(area_log ~ ISI, data = datos.train)
+mod_temp <- lm(area_log ~ temp, data = datos.train)
+
+# Creamos la tabla comparativa
+comparativa_simples <- rbind(
+  Modelo_RH   = obtener_metricas(mod_rh),
+  Modelo_ISI  = obtener_metricas(mod_isi),
+  Modelo_Temp = obtener_metricas(mod_temp)
+)
+
+round(comparativa_simples, 4)
+```
+
+Tras comparar los modelos de Humedad Relativa (RH), ISI y temperatura, el modelo de RH se confirma como la mejor opción individual. Los datos muestran que presenta el error más bajo (RMSE de 1.3799) y la mayor capacidad explicativa (R² ajustado de 0.0061), superando al modelo de temperatura, cuyo R² ajustado negativo lo invalida como predictor lineal fiable. Esta superioridad numérica, sumada a un mejor cumplimiento de los supuestos de linealidad y homocedasticidad en los gráficos de residuos, justifica la elección de la humedad relativa como la variable individual más relevante para el análisis.
+
 ## Modelos líneales múltiples
 
 Se consideran variables meteorológicas e índices de combustible para modelar el área quemada.
@@ -1517,6 +1546,55 @@ print(output)
 
 Los resultados de Lasso funcionan como un mecanismo de selección automática de variables: al aplicar la penalización óptima, el modelo ha reducido exactamente a cero los coeficientes de temp, DC y DMC. Esto indica que estas variables no aportan información predictiva relevante para el área quemada y pueden ser descartadas. En consecuencia, Lasso simplifica la estructura del modelo dejando únicamente a la humedad relativa (RH) y al índice ISI como predictores activos, lo que genera un modelo más robusto y menos propenso al ruido.
 
+Comparación:
+
+```{r}
+# 1. Función unificada para calcular métricas (RMSE, MAE y R2)
+comparar_modelos <- function(reales, predicciones, modelo_obj = NULL, es_glmnet = FALSE) {
+  rmse <- sqrt(mean((reales - predicciones)^2))
+  mae  <- mean(abs(reales - predicciones))
+  
+  # Extraer R2 (Ajustado para OLS, Dev.Ratio para Glmnet)
+  if (es_glmnet) {
+    # Porcentaje de varianza explicada por el mejor lambda
+    r2 <- modelo_obj$glmnet.fit$dev.ratio[which(modelo_obj$lambda == modelo_obj$lambda.min)]
+  } else {
+    r2 <- summary(modelo_obj)$adj.r.squared
+  }
+  
+  return(c(RMSE = rmse, MAE = mae, R2_Ajustado = r2))
+}
+
+# 2. Obtener predicciones de los 4 modelos sobre datos.train
+# A. Modelo Completo (Log) - 12+ variables
+pred_completo <- predict(modelo_log, newdata = datos.train)
+
+# B. Modelo Reducido (OLS) - 5 variables (RH, ISI, temp, DC, DMC)
+pred_ols_red  <- predict(modelo_ols, newdata = datos.train)
+
+# C. Modelo RIDGE (Regularización L2)
+x_mat <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)[, -1]
+pred_ridge    <- predict(cv_ridge, newx = x_mat, s = "lambda.min")
+
+# D. Modelo LASSO (Regularización L1 - Selección de variables)
+pred_lasso    <- predict(cv_lasso, newx = x_mat, s = "lambda.min")
+
+# 3. Crear la Tabla Comparativa Final
+tabla_final <- rbind(
+  "1. Completo (Todas)" = comparar_modelos(datos.train$area_log, pred_completo, modelo_log),
+  "2. Reducido (5 vars)" = comparar_modelos(datos.train$area_log, pred_ols_red, modelo_ols),
+  "3. Ridge (Estable)"  = comparar_modelos(datos.train$area_log, pred_ridge, cv_ridge, TRUE),
+  "4. Lasso (Óptimo)"   = comparar_modelos(datos.train$area_log, pred_lasso, cv_lasso, TRUE)
+)
+
+# 4. Mostrar resultados redondeados
+round(tabla_final, 4)
+```
+
+Tras evaluar las cuatro propuestas, el Modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el Modelo Completo presenta el error más bajo ($RMSE = 1.2844$), su excesiva complejidad (12+ variables) eleva el riesgo de sobreajuste. Por el contrario, Lasso logra optimizar el rendimiento frente al modelo reducido de 5 variables, alcanzando un $R^2$ Ajustado superior (0.0193) y un error competitivo ($RMSE = 1.3733$) utilizando una estructura mínima.
+
+Al haber reducido a cero los coeficientes de las variables menos relevantes (temperatura e índices de sequía profunda), Lasso ofrece la mejor capacidad de generalización y una interpretación técnica clara para la gestión forestal, centrada exclusivamente en los motores principales: la Humedad Relativa (RH) y el Índice de Propagación (ISI).
+
 # 4. Modelos de regresión generalizada
 
 ```{r}
@@ -1558,6 +1636,80 @@ odds_ratios <- exp(coef(glm_fuego_opt))
 print("Odds Ratios (Riesgo relativo):")
 print(odds_ratios)
 
+# 7. Diagnóstico de Residuos (Binned Plots)
+# Para logística no se usan los residuos normales, se usan "binned residuals"
+library(arm)
+binnedplot(fitted(glm_fuego_opt), 
+           residuals(glm_fuego_opt, type = 'response'), 
+           main = "Binned residual plot (Modelo Logístico)")
+```
+
+```{r}
+# 1. Preparar el Target Binario 
+datos.train$fuego <- ifelse(datos.train$area > 0, 1, 0)
+datos.train$fuego <- as.factor(ifelse(datos.train$fuego == 1, "present", "absent"))
+```
+
+```{r}
+glm_fuego <- glm(fuego ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain, 
+                 family = binomial("logit"), data = datos.train)
+summary(glm_fuego)
+```
+
+La aparente significancia exclusiva de la variable X en el modelo saturado no implica que el resto de variables, en particular los factores meteorológicos, sean irrelevantes. Por el contrario, este resultado es consistente con la presencia de multicolinealidad entre las variables explicativas.
+
+En concreto, tal y como se observa en la matriz de correlación, variables como el índice FWI y la temperatura presentan una elevada correlación, es decir, comparten una gran proporción de información (varianza común). Esta redundancia dificulta que el modelo logístico pueda separar correctamente el efecto individual de cada variable sobre la variable respuesta.
+
+```{r}
+# 3. Bondad de Ajuste Global (Prueba de Desviación)
+# ¿Es el modelo mejor que uno vacío?
+deviance_diff <- glm_fuego$null.deviance - glm_fuego$deviance
+df_diff <- glm_fuego$df.null - glm_fuego$df.residual
+p_val_global <- 1 - pchisq(deviance_diff, df = df_diff)
+cat("P-valor del test global:", p_val_global, "\n")
+```
+
+El modelo presenta una Null deviance de 354.17 y una Residual deviance de 339.24. Aunque se observa una reducción en la desviación, el test de la razón de verosimilitud sugiere que el modelo saturado no es lo suficientemente parsimonioso. El AIC de 361.24 servirá como base de comparación para los métodos de selección de variables; el objetivo será encontrar un modelo simplificado que reduzca este valor, eliminando el ruido causado por las variables no significativas
+
+```{r}
+# 4. Selección Automática de Variables 
+glm_fuego_opt <- step(glm_fuego, direction = "both")
+```
+
+Tras un proceso iterativo de eliminación stepwise, el modelo óptimo resultante ($AIC = 351.65$) redujo la complejidad eliminando 7 predictores redundantes. Las variables finales seleccionadas son X, FFMC e ISI.
+
+```{r}
+modelo_final_log <- glm(fuego ~ X + FFMC + ISI, family = binomial("logit"), data = datos.train)
+summary(modelo_final_log)
+```
+
+```{r}
+# 5. Evaluación con Matriz de Confusión (En datos de TEST para mayor rigor)
+# Primero preparamos los datos de test igual que los de train
+datos.test$fuego <- as.factor(ifelse(datos.test$area > 0, "present", "absent"))
+
+# Predicciones
+preds_prob <- predict(glm_fuego_opt, newdata = datos.test, type = 'response')
+preds_clase <- factor(ifelse(preds_prob > 0.5, 'present', 'absent'), levels = c("absent", "present"))
+
+# Matriz de Confusión
+library(caret)
+confusionMatrix(preds_clase, datos.test$fuego, positive = 'present', mode = 'everything')
+```
+
+La evaluación del modelo logístico final sobre el conjunto de test muestra un Accuracy del 49.6%, un valor que se sitúa por debajo del No Information Rate (55.04%), sugiriendo que el modelo no supera la capacidad predictiva del azar en esta muestra.
+
+Si bien el modelo muestra una Sensibilidad aceptable (66.2%) para identificar incendios presentes, su Especificidad es muy baja (29.3%), lo que se traduce en un elevado número de falsos positivos (41 casos de 'absent' predichos como 'present'). El valor de Kappa negativo (-0.04) confirma que el modelo no ha logrado capturar un patrón robusto que permita diferenciar la ocurrencia o ausencia de fuego basándose únicamente en las variables X, FFMC e ISI.
+
+```{r}
+# 6. Interpretación: Odds Ratios
+# Esto es vital para tu informe. Dice cuánto aumenta el riesgo de incendio por cada variable.
+odds_ratios <- exp(coef(glm_fuego_opt))
+print("Odds Ratios (Riesgo relativo):")
+print(odds_ratios)
+```
+
+```{r}
 # 7. Diagnóstico de Residuos (Binned Plots)
 # Para logística no se usan los residuos normales, se usan "binned residuals"
 library(arm)
