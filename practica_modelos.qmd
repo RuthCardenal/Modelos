@@ -1601,53 +1601,6 @@ Al haber reducido a cero los coeficientes de las variables menos relevantes (tem
 # 4. Modelos de regresión generalizada
 
 ```{r}
-datos.train$fuego <- ifelse(datos.train$area > 0, 1, 0)
-datos.train$fuego <- as.factor(ifelse(datos.train$fuego == 1, "present", "absent")) 
-
-# 2. Ajustar el Modelo Completo
-# Usamos todas las variables para predecir si hay o no fuego
-glm_fuego <- glm(fuego ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain, 
-                family = binomial("logit"), data = datos.train)
-summary(glm_fuego)
-
-# 3. Bondad de Ajuste Global (Prueba de Desviación)
-# ¿Es el modelo mejor que uno vacío?
-deviance_diff <- glm_fuego$null.deviance - glm_fuego$deviance
-df_diff <- glm_fuego$df.null - glm_fuego$df.residual
-p_val_global <- 1 - pchisq(deviance_diff, df = df_diff)
-cat("P-valor del test global:", p_val_global, "\n")
-
-# 4. Selección Automática de Variables (Paso a paso)
-# Esto te dará el "Mejor Modelo" para el Punto 4
-glm_fuego_opt <- step(glm_fuego, direction = "both")
-
-# 5. Evaluación con Matriz de Confusión (En datos de TEST para mayor rigor)
-# Primero preparamos los datos de test igual que los de train
-datos.test$fuego <- as.factor(ifelse(datos.test$area > 0, "present", "absent"))
-
-# Predicciones
-preds_prob <- predict(glm_fuego_opt, newdata = datos.test, type = 'response')
-preds_clase <- factor(ifelse(preds_prob > 0.5, 'present', 'absent'), levels = c("absent", "present"))
-
-# Matriz de Confusión
-library(caret)
-confusionMatrix(preds_clase, datos.test$fuego, positive = 'present', mode = 'everything')
-
-# 6. Interpretación: Odds Ratios
-# Esto es vital para tu informe. Dice cuánto aumenta el riesgo de incendio por cada variable.
-odds_ratios <- exp(coef(glm_fuego_opt))
-print("Odds Ratios (Riesgo relativo):")
-print(odds_ratios)
-
-# 7. Diagnóstico de Residuos (Binned Plots)
-# Para logística no se usan los residuos normales, se usan "binned residuals"
-library(arm)
-binnedplot(fitted(glm_fuego_opt), 
-           residuals(glm_fuego_opt, type = 'response'), 
-           main = "Binned residual plot (Modelo Logístico)")
-```
-
-```{r}
 # 1. Preparar el Target Binario 
 datos.train$fuego <- ifelse(datos.train$area > 0, 1, 0)
 datos.train$fuego <- as.factor(ifelse(datos.train$fuego == 1, "present", "absent"))
@@ -1712,6 +1665,8 @@ print("Odds Ratios (Riesgo relativo):")
 print(odds_ratios)
 ```
 
+El análisis de los Odds Ratios permite cuantificar el impacto real de los predictores. Se observa que la ubicación (X) y la sequedad de los combustibles finos (FFMC) son factores de riesgo positivos, incrementando las posibilidades de incendio en un 15.5% y 5.2% respectivamente por cada unidad de incremento.
+
 ```{r}
 # 7. Diagnóstico de Residuos (Binned Plots)
 # Para logística no se usan los residuos normales, se usan "binned residuals"
@@ -1720,3 +1675,5 @@ binnedplot(fitted(glm_fuego_opt),
            residuals(glm_fuego_opt, type = 'response'), 
            main = "Binned residual plot (Modelo Logístico)")
 ```
+
+Este gráfico nos asegura que el modelo está bien construido y que los errores que comete son por la dificultad de los datos y no porque el modelo esté mal hecho
