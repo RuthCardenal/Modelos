@@ -944,17 +944,17 @@ grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
 
 El análisis de los gráficos de diagnóstico muestra que el modelo de regresión lineal simple no cumple completamente los supuestos clásicos del modelo lineal.
 
-El gráfico de residuos frente a los valores ajustados presenta una ligera curvatura, lo que sugiere una falta de linealidad.
+El gráfico de residuos frente a los valores ajustados presenta una ligera curvatura, lo que indica una posible falta de linealidad. No obstante, este supuesto será evaluado posteriormente mediante el test de Ramsey RESET.
 
-El gráfico Q-Q indica que los residuos siguen aproximadamente una distribución normal en el centro, aunque presentan desviaciones en los extremos, por lo que la normalidad no se cumple completamente.
+El gráfico Q-Q indica que los residuos siguen aproximadamente una distribución normal en el centro, aunque presentan desviaciones en los extremos.
 
-El gráfico Scale-Location sugiere cierta heterocedasticidad, aunque no muy pronunciada.
+El gráfico Scale-Location indica cierta heterocedasticidad, aunque no muy pronunciada.
 
 En el gráfico de residuos frente al leverage no se observan puntos especialmente influyentes.
 
 El histograma de residuos presenta cierta simetría, aunque con desviaciones respecto a la normalidad.
 
-Por último, el gráfico de residuos frente al orden no muestra patrones claros, lo que sugiere independencia de los errores.
+Por último, el gráfico de residuos frente al orden no muestra patrones claros, lo que indica independencia de los errores.
 
 ```{r}
 suppressPackageStartupMessages(library(lmtest))
@@ -965,7 +965,14 @@ reset_resultado <- resettest(modelo, power = 2:3, type = "fitted")
 print(reset_resultado)
 ```
 
-El test RESET no muestra evidencia de mala especificación del modelo (p-valor \> 0.05), por lo que la forma funcional lineal puede considerarse adecuada.
+```{r}
+# Prueba de Breusch-Pagan
+suppressPackageStartupMessages(library(lmtest))
+bp_resultado <- bptest(modelo)
+print(bp_resultado)
+```
+
+El test RESET da un p-valor mayor que 0.05, por lo que el modelo lineal puede considerarse adecuado. Por otro lado, el test de Breusch-Pagan da un p-valor de 0.062, mayor que 0.05, por lo que no hay evidencia de heterocedasticidad.
 
 Sin embargo, esto no implica que el modelo sea útil, ya que la variable explicativa no resulta significativa y la capacidad explicativa es muy baja.
 
@@ -1457,21 +1464,17 @@ rmse
 mae
 ```
 
-El modelo de regresión con log(area+1) muestra una capacidad explicativa limitada (R² ajustado = 0.0456), indicando que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
+El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa (R² ajustado = 0.0456), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
 
-El test F no resulta significativo al nivel del 5% (p = 0.07142), aunque muestra cierta tendencia a serlo, lo que sugiere una capacidad explicativa global limitada.
+El test F no es significativo al 5% (p = 0.071), lo que indica que el modelo en conjunto no resulta significativo.
 
-Solo algunas variables resultan significativas, como la temperatura (temp), la coordenada espacial X y el mes de diciembre, mientras que la mayoría no presentan efecto estadísticamente significativo.
+Solo algunas variables son significativas, como la temperatura, la coordenada X y el mes de diciembre, mientras que la mayoría no tienen efecto estadísticamente significativo. Esto indica la posible presencia de variables irrelevantes y la necesidad de simplificar el modelo.
 
-Esto sugiere la presencia de variables irrelevantes y posible multicolinealidad, por lo que es necesario aplicar técnicas de selección de variables o regularización para mejorar el modelo.
+El modelo con transformación logarítmica presenta menores errores (RMSE = 1.284, MAE = 1.043) que el modelo sin transformar, aunque no son directamente comparables por estar en distintas escalas.
 
-El modelo con transformación logarítmica presenta un RMSE de 1.284 y un MAE de 1.043 (en escala logarítmica), mientras que el modelo sin transformación presenta un RMSE de 70.41 y un MAE de 19.48 en escala original. Aunque no son directamente comparables por estar en distintas escalas, la transformación logarítmica permite un mejor comportamiento del modelo en términos de ajuste y estabilidad.
+En conjunto, el modelo mejora con la transformación logarítmica, aunque su capacidad explicativa sigue siendo limitada.
 
-Aunque el error en escala logarítmica es moderado, esto es esperable dado el carácter complejo y altamente variable del dataset.
-
-El modelo predice el logaritmo del área quemada (log(area+1)), lo que permite modelar mejor la relación entre variables y estabilizar la varianza.
-
-**VIF**
+### 3º Modelo: **VIF**
 
 ```{r}
 # Cargar la librería necesaria
@@ -1511,7 +1514,7 @@ print(vif_summary)
 
 Para garantizar la estabilidad de los coeficientes del modelo multivariante, se ha calculado el **Factor de** Todos los valores VIF se encuentran significativamente por debajo del umbral crítico de **5** (y muy lejos del límite de 10). Esto indica que no existe multicolinealidad entre los predictores.
 
-Lasso
+### 4º Modelo: Lasso
 
 ```{r}
 library(glmnet)
@@ -1546,7 +1549,7 @@ print(output)
 
 Los resultados de Lasso funcionan como un mecanismo de selección automática de variables: al aplicar la penalización óptima, el modelo ha reducido exactamente a cero los coeficientes de temp, DC y DMC. Esto indica que estas variables no aportan información predictiva relevante para el área quemada y pueden ser descartadas. En consecuencia, Lasso simplifica la estructura del modelo dejando únicamente a la humedad relativa (RH) y al índice ISI como predictores activos, lo que genera un modelo más robusto y menos propenso al ruido.
 
-Comparación:
+### **Comparación:**
 
 ```{r}
 # 1. Función unificada para calcular métricas (RMSE, MAE y R2)
