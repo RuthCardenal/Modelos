@@ -50,8 +50,8 @@ El objetivo principal de este análisis es predecir la variable area, la cual ex
 
 ### Variables categóricas
 
--   **month (mes):** Variable categórica ordinal que indica el mes del año en el que ocurre la observación. Toma valores categóricos desde 'jan' hasta 'dec'.
--   **day (día):** Variable categórica ordinal que indica el día de la semana en el que ocurre la observación. Toma valores desde 'mon' hasta 'sun'.
+-   **month (mes):** Variable categórica que indica el mes del año en el que ocurre la observación. Toma valores categóricos desde 'jan' hasta 'dec'.
+-   **day (día):** Variable categórica que indica el día de la semana en el que ocurre la observación. Toma valores desde 'mon' hasta 'sun'.
 
 # 2. PREPARACIÓN DE DATOS
 
@@ -790,9 +790,9 @@ Las correlaciones lineales con el tamaño del incendio (area_log) son muy débil
 
 # 3. MODELOS DE REGRESIÓN LÍNEAL SIMPLE Y MÚLTIPLE
 
-## Modelos líneales simples
+## Modelos lineales simples
 
-Se seleccionan aquellas variables que presentan mayor relación con la variable objetivo, basándose en el análisis exploratorio previo (EDA), con el fin de evaluar su efecto individual sobre el área quemada. Posteriormente, se ajusta un modelo de regresión lineal simple para cada variable seleccionada.
+Se seleccionan aquellas variables que presentan mayor relación con la variable objetivo, basándose en el análisis exploratorio previo (EDA), con el fin dee evaluar su efecto individual sobre el área quemada. Posteriormente, se ajusta un modelo de regresión lineal simple para cada variable seleccionada.
 
 ### Entre 'RH' y 'area_log'
 
@@ -977,6 +977,8 @@ El test RESET da un p-valor mayor que 0.05, por lo que el modelo lineal puede co
 Sin embargo, esto no implica que el modelo sea útil, ya que la variable explicativa no resulta significativa y la capacidad explicativa es muy baja.
 
 En conclusión, aunque el modelo puede considerarse aproximadamente lineal, no resulta útil desde el punto de vista predictivo.
+
+LOS GRÁFICOS DE RESIDUOS MUESTRAN CLARAMENTE QUE EL MODELO NO CUMPLE LA HIPÓTESIS DE NORMALIDAD NI LA DE HOMOCEDASTICIDAD. ASÍ, YA TENEMOSMOTIVOS DE SOBRA PARA DESCARTAR ESTE MODELO (NO ES NECESARIO COMPROBAR LA INDEPENDENCIA)
 
 ### Entre 'ISI' y 'area_log'
 
@@ -1221,7 +1223,7 @@ p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos), aes(x 
 grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
 ```
 
-interpretación: El gráfico de residuos frente a los valores ajustados muestra que, en general, la línea se mantiene cerca de cero. Aunque en los extremos se nota una ligera curvatura y hay más puntos concentrados en los valores altos, el modelo parece captar bastante bien la relación lineal principal.
+Interpretación: El gráfico de residuos frente a los valores ajustados muestra que, en general, la línea se mantiene cerca de cero. Aunque en los extremos se nota una ligera curvatura y hay más puntos concentrados en los valores altos, el modelo parece captar bastante bien la relación lineal principal.
 
 Respecto a la homocedasticidad, el gráfico Scale-Location indica que la dispersión de los residuos aumenta un poco cuando crecen los valores predichos. Sin embargo, como este aumento no es muy marcado ni forma un patrón claro en forma de embudo, se puede considerar que la varianza es más o menos constante.
 
@@ -1525,11 +1527,11 @@ Y <- datos.train$area_log
 
 # 2. EJECUTAR RIDGE (alpha = 0)
 set.seed(123)
-cv_ridge <- cv.glmnet(X, Y, alpha = 0) 
+cv_ridge <- cv.glmnet(X, Y, alpha = 0,standardize=TRUE) 
 
 # 3. EJECUTAR LASSO (alpha = 1)
 set.seed(123)
-cv_lasso <- cv.glmnet(X, Y, alpha = 1)
+cv_lasso <- cv.glmnet(X, Y, alpha = 1,standardize=TRUE)
 
 # 4. EJECUTAR OLS (Regresión normal para comparar)
 modelo_ols <- lm(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)
@@ -1597,6 +1599,12 @@ round(tabla_final, 4)
 Tras evaluar las cuatro propuestas, el Modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el Modelo Completo presenta el error más bajo ($RMSE = 1.2844$), su excesiva complejidad (12+ variables) eleva el riesgo de sobreajuste. Por el contrario, Lasso logra optimizar el rendimiento frente al modelo reducido de 5 variables, alcanzando un $R^2$ Ajustado superior (0.0193) y un error competitivo ($RMSE = 1.3733$) utilizando una estructura mínima.
 
 Al haber reducido a cero los coeficientes de las variables menos relevantes (temperatura e índices de sequía profunda), Lasso ofrece la mejor capacidad de generalización y una interpretación técnica clara para la gestión forestal, centrada exclusivamente en los motores principales: la Humedad Relativa (RH) y el Índice de Propagación (ISI).
+
+DIAGNÓSTICO DEL MODELO
+
+gráficos parciales
+
+La regresión lineal no es un buen modelo para estos datos.
 
 # 4. Modelos de regresión generalizada
 
@@ -1677,3 +1685,26 @@ binnedplot(fitted(glm_fuego_opt),
 ```
 
 Este gráfico nos asegura que el modelo está bien construido y que los errores que comete son por la dificultad de los datos y no porque el modelo esté mal hecho
+
+```{r}
+library(car)
+residualPlots(glm_fuego_opt)
+```
+
+COMENTAR ESTOS GRÁFICOS
+
+PROBAR EN TEST COMOGENERALIZA
+
+CONCLUSIONES:
+
+LA OPCIÓN DE BINARIZAR ES BUENA, LOS DATOS PRESENTAN DISTINTA CASUÍSTICA Y ES MEJOR EMPEZAR CON UNA ALTERNATIVA BINARIA DE CLASIFICACIÓN, HABRÍA QUE SEGUIR ESTUDIANDO BBLA BLA
+
+# Reparto del trabajo
+
+Aunque los tres miembros del grupo hemos colaborado en la elaboración y revisión de toda la práctica, cada una ha llevado un poco más la voz cantante en distintas secciones. En particular, a continuación se detallalas secciones ordenadas por grado de participación:
+
+-   Kimberly: Modelos lineales generalizados, EDA, modelos lineales, comparación de modelos y conclusiones. Revisión final.
+
+-   Cristina: EDA, modelo lineal simple y múltiple, modelos lineales generalizados, comparación de modelos y conclusiones. Revisión final.
+
+-   Ruth: Comparación de modelos, EDA, modelos lineales simple y múltiple, modelos lineales generalizados y conclusiones. Revisión final.
