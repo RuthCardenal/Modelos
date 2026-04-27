@@ -62,7 +62,6 @@ Observamos que esta muestra posee 517 filas y 13 columnas.
 ```{r}
 datos <- read.csv("forestfires.csv")
 print(datos)
-View(datos)    
 dim(datos)    
 head(datos)
 ```
@@ -108,7 +107,6 @@ datos$meses_frio  <- ifelse(datos$month %in% frio, 1, 0)
 
 #-- el operador %in% es una herramienta muy útil que sirve para verificar si un elemento (o varios) pertenece a un grupo o lista. El operador compara cada elemento del lado izquierdo con todos los elementos del lado derecho. El resultado es siempre un valor lógico: TRUE (sí está) o FALSE (no está).
 
-View(datos)
 ```
 
 ##### PARTICIONES (TRAIN, TEST Y VALIDACIÓN):
@@ -168,8 +166,13 @@ Este primer vistazo a los datos muestra que el dataset está compuesto principal
 Por otro lado, se convierten las variables $month$ y $day$ a factores porque la conversión a factores permite que los modelos generen variables dummy y traten correctamente la naturaleza cualitativa de estas variables.
 
 ```{r}
-datos.train$month <- as.factor(datos.train$month)
-datos.train$day <- as.factor(datos.train$day)
+datos.train$month <- factor(datos.train$month,
+  levels = c("jan","feb","mar","apr","may","jun",
+             "jul","aug","sep","oct","nov","dec"))
+
+datos.train$day <- factor(datos.train$day,
+  levels = c("mon","tue","wed","thu","fri","sat","sun"))
+
 str(datos.train)
 ```
 
@@ -398,6 +401,36 @@ boxplot(datos.train$rain,
 
 **Boxplot:** El diagrama de caja ratifica esta falta de variabilidad: la estructura de la caja aparece colapsada sobre el cero, dado que la mediana y los cuartiles coinciden en ese valor. Se detectan tres valores atípicos que corresponden a eventos específicos con precipitaciones bajas de aproximadamente 0.8, 1.0 y 1.4 mm/m².
 
+**Transformación de la variable** $rain$**:**
+
+Se transforma la variable rain en una variable binaria (0: no lluvia, 1: lluvia) para simplificar su interpretación y mejorar el ajuste del modelo.
+
+```{r}
+datos.train$rain_bin <- ifelse(datos.train$rain > 0, 1, 0)
+```
+
+```{r}
+par(mfrow=c(1, 2))
+
+# Histograma  
+hist(datos.train$rain_bin, 
+     main="Distribución de 'rain_bin'", 
+     xlab="Lluvia (mm/m²)", 
+     col="skyblue",     
+     border="white",
+     breaks=20)
+
+# Boxplot 
+boxplot(datos.train$rain_bin, 
+        main="Caja y Bigotes de 'rain_bin'", 
+        ylab="mm/m²", 
+        col="dodgerblue") 
+```
+
+Los gráficos muestran que la nueva variable *rain_bin* está muy desbalanceada, ya que la gran mayoría de los valores son 0 (no lluvia) y solo hay muy pocos casos con valor 1 (lluvia).
+
+En el diagrama de caja se observa que casi todos los valores están concentrados en 0, con algunos pocos valores en 1, lo que refleja la escasa presencia de lluvia en el dataset
+
 #### Análisis de la variable numérica 'area':
 
 ```{r}
@@ -460,14 +493,6 @@ ggplot(datos.train, aes(x = month, fill = month)) +
 #### Análisis de la variable categórica 'day':
 
 ```{r}
-# 1. Definir el orden lógico de la semana
-niveles_dias <- c("mon", "tue", "wed", "thu", "fri", "sat", "sun")
-
-# 2. Convertir a factor ordenado
-datos.train$day <- factor(datos.train$day, levels = niveles_dias)
-
-library(ggplot2)
-
 ggplot(datos.train, aes(x = day, fill = day)) +
   geom_bar(color = "white") +
   # Usamos una paleta de colores llamativa
@@ -480,20 +505,43 @@ ggplot(datos.train, aes(x = day, fill = day)) +
 
 **Distribucion**: La gráfica muestra que la cantidad de incendios cambia según el día de la semana. Se observa que los valores más altos aparecen el jueves, viernes, sábado y sobre todo, el domingo, lo que indica que durante el fin de semana hay más incedios. Esto probablemente se debe a que hay más personas realizando actividades al aire libre, lo que aumenta el riesgo de que se inicien fuegos de forma accidental.
 
-## ANÁLISIS BIVARIANTE
-
-#### Relación entre el mes y el área quemada (escala logarítmica).
+**Transformación variable** $day$**:**
 
 ```{r}
-ggplot(datos.train, aes(x = month, y = area_log, fill = month)) +
+datos.train$day_bin <- ifelse(datos.train$day %in% c("thu", "fri", "sat", "sun"), 1, 0)
+```
+
+Se ha creado una variable binaria que agrupa los días en dos categorías: entre semana (lunes a miércoles) y fin de semana ampliado (jueves a domingo), con el objetivo de captar posibles cambios en el comportamiento de los incendios en los días cercanos al fin de semana.
+
+**Visualización:**
+
+```{r}
+ggplot(datos.train, aes(x = factor(day_bin), fill = factor(day_bin))) +
+  geom_bar() +
+  scale_x_discrete(labels = c("Entre semana", "Fin de semana")) +
+  labs(title = "Distribución de días",
+       x = "", y = "Frecuencia") +
+  theme_classic() +
+  theme(legend.position = "none")
+
+```
+
+Podemos observar que hay más incendios los fines de semana (jueves, viernes, sábado y domingo) que entre semana (lunes, martes y miércoles), como hemos dicho anteriormente.
+
+## ANÁLISIS BIVARIANTE
+
+#### Relación entre el mes y el área quemada.
+
+```{r}
+ggplot(datos.train, aes(x = month, y = area, fill = month)) +
   geom_bar(stat = "summary", fun = "mean") +
-  labs(title = "Área quemada promedio por mes (escala logarítmica)",
+  labs(title = "Área quemada promedio por mes",
        x = "Mes",
-       y = "Media de log(area + 1)") +
+       y = "Media") +
   theme_classic()
 ```
 
-**Distribución**: La gráfica de promedios revela que la peligrosidad de un incendio no depende solo de la cantidad de fuegos que haya (frecuencia), sino de la capacidad de propagación. Mayo y diciembre son los meses donde, estadísticamente, un incendio tiene más probabilidades de convertirse en un evento de gran magnitud.
+**Distribución**: La gráfica de promedios revela que la peligrosidad de un incendio no depende solo de la cantidad de fuegos que haya (frecuencia), sino de la capacidad de propagación. Mayo, septiembre y diciembre son los meses donde, estadísticamente, un incendio tiene más probabilidades de convertirse en un evento de gran magnitud.
 
 #### Relación entre la temperatura y el área quemada (escala logarítmica).
 
@@ -944,17 +992,17 @@ grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
 
 El análisis de los gráficos de diagnóstico muestra que el modelo de regresión lineal simple no cumple completamente los supuestos clásicos del modelo lineal.
 
-El gráfico de residuos frente a los valores ajustados presenta una ligera curvatura, lo que indica una posible falta de linealidad. No obstante, este supuesto será evaluado posteriormente mediante el test de Ramsey RESET.
+El gráfico de residuos frente a los valores ajustados presenta cierta curvatura, lo que indica que la linealidad no se cumple completamente. No obstante, este supuesto será evaluado posteriormente mediante el test de Ramsey RESET.
 
-El gráfico Q-Q indica que los residuos siguen aproximadamente una distribución normal en el centro, aunque presentan desviaciones en los extremos.
+El gráfico Q-Q indica que los residuos siguen aproximadamente una distribución normal en el centro, aunque presentan desviaciones en los extremos, por lo que no se cumple completamente el supuesto de normalidad.
 
-El gráfico Scale-Location indica cierta heterocedasticidad, aunque no muy pronunciada.
+El gráfico Scale-Location muestra heterocedasticidad, ya que el patrón de puntos presenta forma de embudo, por lo que no se cumple el supuesto de homocedasticidad.
 
 En el gráfico de residuos frente al leverage no se observan puntos especialmente influyentes.
 
-El histograma de residuos presenta cierta simetría, aunque con desviaciones respecto a la normalidad.
+El histograma de residuos presenta cierta simetría, en línea con el gráfico Q-Q, aunque con desviaciones respecto a la normalidad.
 
-Por último, el gráfico de residuos frente al orden no muestra patrones claros, lo que indica independencia de los errores.
+Por último, el gráfico de residuos frente al orden no muestra patrones claros, lo que sugiere independencia de los errores.
 
 ```{r}
 suppressPackageStartupMessages(library(lmtest))
@@ -972,13 +1020,13 @@ bp_resultado <- bptest(modelo)
 print(bp_resultado)
 ```
 
-El test RESET da un p-valor mayor que 0.05, por lo que el modelo lineal puede considerarse adecuado. Por otro lado, el test de Breusch-Pagan da un p-valor de 0.062, mayor que 0.05, por lo que no hay evidencia de heterocedasticidad.
+El test RESET da un p-valor mayor que 0.05, por lo que el supuesto de linealidad puede considerarse cumplido. Por otro lado, el test de Breusch-Pagan da un p-valor de 0.062, mayor que 0.05, por lo que no hay evidencia de heterocedasticidad. Sin embargo, está muy al límite y, a un nivel de confianza del 99%, no habría homocedasticidad.
 
-Sin embargo, esto no implica que el modelo sea útil, ya que la variable explicativa no resulta significativa y la capacidad explicativa es muy baja.
+Aunque se cumpla la linealidad, los gráficos de residuos muestran claramente que el modelo no cumple el supuesto de normalidad ni el de homocedasticidad.
 
-En conclusión, aunque el modelo puede considerarse aproximadamente lineal, no resulta útil desde el punto de vista predictivo.
+En conclusión, aunque el modelo puede considerarse aproximadamente lineal, al no cumplir los supuestos mencionados anteriormente, puede descartarse. Además, la variable explicativa no resulta significativa y la capacidad explicativa es muy baja.
 
-LOS GRÁFICOS DE RESIDUOS MUESTRAN CLARAMENTE QUE EL MODELO NO CUMPLE LA HIPÓTESIS DE NORMALIDAD NI LA DE HOMOCEDASTICIDAD. ASÍ, YA TENEMOSMOTIVOS DE SOBRA PARA DESCARTAR ESTE MODELO (NO ES NECESARIO COMPROBAR LA INDEPENDENCIA)
+Por otro lado, dado que se ha comprobado que hay supuestos que no se cumplen, no es necesario realizar el test de independencia ni el de normalidad.
 
 ### Entre 'ISI' y 'area_log'
 
