@@ -1961,7 +1961,74 @@ residualPlots(glm_fuego_opt)
 
 El modelo comete errores grandes en algunos casos. Esto significa que predice mal: puede decir que hay poco riesgo cuando en realidad sí lo hay, o la revés. Por ello, sería conveniente estudiar esos casos.
 
-PROBAR EN TEST COMOGENERALIZAERALIZA
+## 5. Comparación y evalución de modelos
+
+```{r}
+# =========================================================================
+# 1. PREPROCESAMIENTO COMPLETO DE DATOS.TEST (RÉPLICA DE TRAIN)
+# =========================================================================
+
+# A. Sincronización de Factores (Mes y Día)
+datos.test$month <- factor(datos.test$month, 
+                           levels = levels(datos.train$month))
+datos.test$day   <- factor(datos.test$day, 
+                           levels = levels(datos.train$day))
+
+# B. Clasificación Estacional (Calor/Frío)
+calor <- c("jun", "jul", "aug", "sep")
+frio  <- c("jan", "feb", "mar", "apr", "may", "oct", "nov", "dec")
+datos.test$meses_calor <- ifelse(datos.test$month %in% calor, 1, 0)
+datos.test$meses_frio  <- ifelse(datos.test$month %in% frio, 1, 0)
+
+# C. Binarización de Variables (Lluvia y Día de la semana)
+datos.test$rain_bin <- ifelse(datos.test$rain > 0, 1, 0)
+datos.test$day_bin  <- ifelse(datos.test$day %in% c("thu", "fri", "sat", "sun"), 1, 0)
+
+# D. Transformación de la Variable Objetivo
+datos.test$area_log <- log1p(datos.test$area)
+
+# E. Variable para Regresión Logística (Fuego Presente/Ausente)
+datos.test$fuego <- as.factor(ifelse(datos.test$area > 0, "present", "absent"))
+
+# =========================================================================
+# 2. EVALUACIÓN DEL MEJOR MODELO (LASSO) EN TEST
+# =========================================================================
+
+# Crear la matriz de diseño para Test (debe coincidir con la de Train)
+X_test_mat <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.test)[, -1]
+Y_test_real <- datos.test$area_log
+
+# Generar predicciones usando el mejor lambda del entrenamiento
+pred_test_lasso <- predict(cv_lasso, newx = X_test_mat, s = "lambda.min")
+
+# Guardar predicciones en el dataset para visualización
+datos.test$prediccion_lasso <- as.numeric(pred_test_lasso)
+
+# =========================================================================
+# 3. TABLA COMPARATIVA FINAL DE MÉTRICAS (TRAIN VS TEST)
+# =========================================================================
+
+# Función para calcular RMSE y MAE
+metricas <- function(real, pred) {
+  rmse <- sqrt(mean((real - pred)^2))
+  mae  <- mean(abs(real - pred))
+  return(c(RMSE = rmse, MAE = mae))
+}
+
+# Consolidar resultados
+res_train <- metricas(datos.train$area_log, datos.train$prediccion_lasso)
+res_test  <- metricas(Y_test_real, datos.test$prediccion_lasso)
+
+comparativa_final <- rbind(
+  "Entrenamiento (Train)" = res_train,
+  "Prueba (Test)"         = res_test
+)
+
+print("=== EVALUACIÓN FINAL DEL MODELO LASSO ===")
+round(comparativa_final, 4)
+```
+
+La evaluación final del modelo Lasso revela una excelente capacidad de generalización y robustez técnica, fundamentada en la estrecha coherencia entre las métricas de ambos conjuntos de datos. El error cuadrático medio obtenido en el conjunto de entrenamiento ($RMSE = 1.3733$) presenta una desviación mínima respecto al observado en el conjunto de prueba ($RMSE = 1.4434$), lo que representa una diferencia de apenas el 5%. Esta estabilidad, sumada a la consistencia de los errores absolutos medios ($MAE_{train} = 1.1479$ frente a $MAE_{test} = 1.1935$), confirma que la regularización Lasso ha mitigado con éxito el riesgo de sobreajuste (overfitting). El modelo no se ha limitado a memorizar el ruido de la muestra original, sino que ha logrado extraer patrones meteorológicos subyacentes que mantienen su validez ante datos no observados previamente. Aunque la magnitud del error refleja la complejidad intrínseca y la naturaleza estocástica del área quemada en el parque, la parsimonia lograda al seleccionar únicamente los predictores más influyentes garantiza un modelo equilibrado y metodológicamente fiable para la estimación del riesgo forestal.
 
 CONCLUSIONES:
 
