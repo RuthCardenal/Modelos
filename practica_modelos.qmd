@@ -1600,11 +1600,231 @@ Tras evaluar las cuatro propuestas, el Modelo Lasso se selecciona como el más e
 
 Al haber reducido a cero los coeficientes de las variables menos relevantes (temperatura e índices de sequía profunda), Lasso ofrece la mejor capacidad de generalización y una interpretación técnica clara para la gestión forestal, centrada exclusivamente en los motores principales: la Humedad Relativa (RH) y el Índice de Propagación (ISI).
 
-DIAGNÓSTICO DEL MODELO
+### DIAGNÓSTICO DEL MODELO ELEGIDO
 
-gráficos parciales
+```{r}
 
-La regresión lineal no es un buen modelo para estos datos.
+modelo <- lm(ISI ~ RH, data = datos.train)
+
+summary(modelo)
+
+coeficientes <- coef(modelo)
+cat('Intercept beta0 es ', round(coeficientes[1],2), '\n')
+cat('El valor de la pendiente beta1 es ', round(coeficientes[2],2), '\n')
+# Asegúrate de haber definido el modelo antes
+modelo <- lm(RH ~ ISI, data = datos.train)
+
+library(ggplot2)
+library(gridExtra)
+
+# Extraer información del modelo
+residuos <- residuals(modelo)
+valores_ajustados <- fitted(modelo)
+residuos_std <- rstandard(modelo)
+residuos_stud <- rstudent(modelo)
+leverage_vals <- hatvalues(modelo)
+
+# 1. Residuos vs Ajustados (Linealidad y Varianza)
+p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), 
+             aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Residuos vs Ajustados",
+       x = "Valores ajustados", y = "Residuos") +
+  theme_classic()
+
+# 2. Q-Q Plot (Normalidad)
+p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
+  geom_qq(alpha = 0.7, color = "steelblue") +
+  geom_qq_line(color = "red") +
+  labs(title = "Q-Q Plot") +
+  theme_classic()
+
+# 3. Scale-Location (Homocedasticidad)
+p3 <- ggplot(data.frame(x = valores_ajustados, 
+                        y = sqrt(abs(residuos_std))), 
+             aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Scale-Location",
+       x = "Valores ajustados",
+       y = "sqrt(|Res. Std|)") +
+  theme_classic()
+
+# 4. Residuos vs Leverage (Puntos influyentes)
+datos_leverage <- data.frame(leverage = leverage_vals, residuos_stud = residuos_stud)
+p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
+  labs(title = "Residuos vs Leverage",
+       x = "Leverage", y = "Residuos estudentizados") +
+  theme_classic()
+
+# 5. Histograma (Distribución de errores)
+p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 15,
+                 fill = "lightblue", color = "black", alpha = 0.7) +
+  stat_function(fun = dnorm,
+                args = list(mean = mean(residuos), sd = sd(residuos)),
+                color = "red", linewidth = 1) +
+  labs(title = "Histograma de residuos") +
+  theme_classic()
+
+# 6. Residuos vs Orden (Independencia)
+p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos),
+             aes(x = orden, y = residuos)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_line(alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuos vs Orden") +
+  theme_classic()
+
+# Renderizar cuadrícula
+grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
+```
+
+### Estudio del Outlier
+
+```{r}
+# Crear datos para el gráfico Residuals vs. Leverage
+leverage_vals <- hatvalues(modelo)
+residuos_stud <- rstudent(modelo)  # Residuos estudentizados
+cook_dist <- cooks.distance(modelo)
+
+datos_leverage <- data.frame(
+  leverage = leverage_vals,
+  residuos_stud = residuos_stud,
+  cook = cook_dist,
+  observacion = 1:length(leverage_vals)
+)
+
+# Calcular umbrales
+n <- nrow(datos)
+k <- 1
+leverage_threshold <- 2 * (k + 1) / n
+cook_threshold <- 4 / (n - k - 1)
+
+# Función para crear curvas de Cook
+cook_curve <- function(leverage, cook_value, k) {
+  sqrt(cook_value * (k + 1) * (1 - leverage) / leverage)
+}
+
+# Crear curvas de Cook para diferentes valores
+lev_seq <- seq(0.001, max(leverage_vals) * 1.1, length.out = 100)
+cook_05 <- data.frame(
+  leverage = lev_seq,
+  pos = cook_curve(lev_seq, 0.5, k),
+  neg = -cook_curve(lev_seq, 0.5, k)
+)
+cook_1 <- data.frame(
+  leverage = lev_seq,
+  pos = cook_curve(lev_seq, 1, k),
+  neg = -cook_curve(lev_seq, 1, k)
+)
+
+# Gráfico Residuals vs. Leverage con ggplot2
+ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
+  # Curvas de Cook
+  geom_line(data = cook_05, aes(x = leverage, y = pos), 
+            color = "red", linetype = "dashed", alpha = 0.6, inherit.aes = FALSE) +
+  geom_line(data = cook_05, aes(x = leverage, y = neg), 
+            color = "red", linetype = "dashed", alpha = 0.6, inherit.aes = FALSE) +
+  geom_line(data = cook_1, aes(x = leverage, y = pos), 
+            color = "red", linetype = "solid", alpha = 0.8, inherit.aes = FALSE) +
+  geom_line(data = cook_1, aes(x = leverage, y = neg), 
+            color = "red", linetype = "solid", alpha = 0.8, inherit.aes = FALSE) +
+  # Puntos de datos
+  geom_point(color = "#0072B2", alpha = 0.7, size = 2) +
+  # Líneas de referencia
+  geom_hline(yintercept = 0, color = "gray", linetype = "dashed") +
+  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted", alpha = 0.7) +
+  geom_vline(xintercept = leverage_threshold, color = "purple", linetype = "dotted", alpha = 0.7) +
+  # Etiquetas
+  labs(
+    title = "Residuals vs. Leverage",
+    x = "Leverage",
+    y = "Residuos Estudentizados",
+    caption = "Curvas rojas: Cook 0.5 (discontinua) y 1.0 (continua) | Líneas naranjas: ±2 | Línea morada: umbral leverage"
+  ) +
+  theme_classic(base_size = 12)
+
+# Identificar observaciones problemáticas
+high_leverage <- which(leverage_vals > leverage_threshold)
+outliers_stud <- which(abs(residuos_stud) > 2)
+high_cook <- which(cook_dist > cook_threshold)
+```
+
+```{r}
+influence_measures <- influence.measures(modelo)
+summary(influence_measures)
+```
+
+```{r}
+# 1. Crear el nuevo modelo SIN el punto influyente (fila 169)
+# Quitamos los dos grandes sospechosos
+datos_limpios <- datos.train[-300,]
+modelo_limpio <- lm(ISI ~ RH, data = datos_limpios)
+
+# Extraer información del nuevo modelo
+residuos <- residuals(modelo_limpio)
+valores_ajustados <- fitted(modelo_limpio)
+residuos_std <- rstandard(modelo_limpio)
+residuos_stud <- rstudent(modelo_limpio)
+leverage_vals <- hatvalues(modelo_limpio)
+
+# 1. Residuos vs Ajustados
+p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Residuos vs Ajustados (Sin 23)", x = "Valores ajustados", y = "Residuos") +
+  theme_classic()
+
+# 2. Q-Q Plot
+p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
+  geom_qq(alpha = 0.7, color = "steelblue") +
+  geom_qq_line(color = "red") +
+  labs(title = "Q-Q Plot") +
+  theme_classic()
+
+# 3. Scale-Location
+p3 <- ggplot(data.frame(x = valores_ajustados, y = sqrt(abs(residuos_std))), aes(x = x, y = y)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "red") +
+  labs(title = "Scale-Location", x = "Valores ajustados", y = "sqrt(|Res. Std|)") +
+  theme_classic()
+
+# 4. Residuos vs Leverage
+datos_leverage <- data.frame(leverage = leverage_vals, residuos_stud = residuos_stud)
+p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
+  labs(title = "Residuos vs Leverage", x = "Leverage", y = "Residuos estudentizados") +
+  theme_classic()
+
+# 5. Histograma
+p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "lightblue", color = "black", alpha = 0.7) +
+  stat_function(fun = dnorm, args = list(mean = mean(residuos), sd = sd(residuos)), color = "red", linewidth = 1) +
+  labs(title = "Histograma de residuos") +
+  theme_classic()
+
+# 6. Residuos vs Orden
+p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos), aes(x = orden, y = residuos)) +
+  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_line(alpha = 0.3) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  labs(title = "Residuos vs Orden") +
+  theme_classic()
+
+# Renderizar cuadrícula limpia
+grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
+```
+
+Como podemos observar, la regresión lineal no es un buen modelo para estos datos.
 
 # 4. Modelos de regresión generalizada
 
@@ -1691,9 +1911,9 @@ library(car)
 residualPlots(glm_fuego_opt)
 ```
 
-COMENTAR ESTOS GRÁFICOS
+El modelo comete errores grandes en algunos casos. Esto significa que predice mal: puede decir que hay poco riesgo cuando en realidad sí lo hay, o la revés. Por ello, sería conveniente estudiar esos casos.
 
-PROBAR EN TEST COMOGENERALIZA
+PROBAR EN TEST COMOGENERALIZAERALIZA
 
 CONCLUSIONES:
 
