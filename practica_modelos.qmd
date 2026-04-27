@@ -1458,7 +1458,7 @@ Se consideran variables meteorológicas e índices de combustible para modelar e
 
 ```{r}
 # Modelo múltiple con todas las variables (área original)
-modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain + month + day, 
+modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + meses_calor + meses_frio+ day_bin, 
                            data = datos.train)
 
 # Comparación de modelos
@@ -1470,9 +1470,9 @@ cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.
 summary(modelo_multiple_orig)
 ```
 
-El modelo de regresión lineal múltiple con la variable original presenta una capacidad explicativa muy limitada (R² ajustado = -0.04086), indicando que las variables incluidas no aportan información útil para explicar el área quemada.
+El modelo de regresión lineal múltiple con la variable original presenta una capacidad explicativa muy limitada (R² ajustado = -0.0256), indicando que las variables incluidas no aportan información útil para explicar el área quemada.
 
-Además, el modelo en conjunto no resulta significativo (p-valor global = 0.9319), lo que refuerza la falta de relación entre las variables explicativas y la variable respuesta.
+Además, el modelo en conjunto no resulta significativo (p-valor global = 0.93), lo que refuerza la falta de relación entre las variables explicativas y la variable respuesta.
 
 Ninguna de las variables resulta estadísticamente significativa, lo que sugiere que el modelo no es adecuado para explicar el área en su forma original.
 
@@ -1883,7 +1883,7 @@ datos.train$fuego <- as.factor(ifelse(datos.train$fuego == 1, "present", "absent
 ```
 
 ```{r}
-glm_fuego <- glm(fuego ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain, 
+glm_fuego <- glm(fuego ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + day_bin, 
                  family = binomial("logit"), data = datos.train)
 summary(glm_fuego)
 ```
@@ -1901,7 +1901,7 @@ p_val_global <- 1 - pchisq(deviance_diff, df = df_diff)
 cat("P-valor del test global:", p_val_global, "\n")
 ```
 
-El modelo presenta una Null deviance de 354.17 y una Residual deviance de 339.24. Aunque se observa una reducción en la desviación, el test de la razón de verosimilitud sugiere que el modelo saturado no es lo suficientemente parsimonioso. El AIC de 361.24 servirá como base de comparación para los métodos de selección de variables; el objetivo será encontrar un modelo simplificado que reduzca este valor, eliminando el ruido causado por las variables no significativas
+El modelo presenta una Null deviance de 354.17 y una Residual deviance de 334.71. Aunque se observa una reducción en la desviación, el test de la razón de verosimilitud sugiere que el modelo saturado no es lo suficientemente parsimonioso. El AIC de 358.71 servirá como base de comparación para los métodos de selección de variables; el objetivo será encontrar un modelo simplificado que reduzca este valor, eliminando el ruido causado por las variables no significativas
 
 ```{r}
 # 4. Selección Automática de Variables 
