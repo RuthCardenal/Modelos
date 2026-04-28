@@ -1274,7 +1274,7 @@ El modelo con transformación logarítmica presenta menores errores (RMSE = 1.36
 
 En conjunto, el modelo mejora con la transformación logarítmica, aunque su capacidad explicativa sigue siendo limitada.
 
-### 3º y 4º Modelo: Ridge y Lasso
+### 3º Modelo: Lasso
 
 Análisis de multicolinealidad entre las variables predictoras mediante VIF:
 
@@ -1320,20 +1320,15 @@ Los resultados obtenidos permiten comprobar que no se detectan problemas relevan
 X <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)[, -1]
 Y <- datos.train$area_log
 
-# EJECUTAR RIDGE (alpha = 0)
-cv_ridge <- cv.glmnet(X, Y, alpha = 0,standardize=TRUE) 
-
 # EJECUTAR LASSO (alpha = 1)
-cv_lasso <- cv.glmnet(X, Y, alpha = 1,standardize=TRUE)
+cv_lasso <- cv.glmnet(X, Y, alpha = 1, standardize = TRUE)
 
 # EJECUTAR OLS (Regresión normal para comparar)
 modelo_ols <- lm(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)
 
 # CREAR LA TABLA COMPARATIVA
-# Ahora sí, todos los objetos (modelo_ols, cv_ridge y cv_lasso) existen
 output <- cbind(
   OLS   = round(coef(modelo_ols), 3),
-  RIDGE = round(as.matrix(coef(cv_ridge, s = "lambda.min")), 3),
   LASSO = round(as.matrix(coef(cv_lasso, s = "lambda.min")), 3)
 )
 
@@ -1341,29 +1336,25 @@ output <- cbind(
 print(output)
 
 ```
-
 Los resultados de Lasso muestran un proceso de selección automática de variables: al aplicar la penalización óptima (λ seleccionado mediante validación cruzada), los coeficientes de temp y DC se reducen a cero, por lo que estas variables pueden eliminarse del modelo.
 
-De este modo, Lasso mantiene como predictores activos RH (-0.007), ISI (-0.003) y DMC (0.002), obteniendo un modelo más parsimonioso. RH e ISI presentan relación negativa con el área quemada, mientras que DMC presenta una relación positiva, aunque de baja magnitud.
+De este modo, Lasso mantiene como predictores activos RH (-0.008), ISI (-0.007) y DMC (0.003), obteniendo un modelo más parsimonioso. RH e ISI presentan relación negativa con el área quemada, mientras que DMC presenta una relación positiva, aunque de baja magnitud.
 
-Por su parte, Ridge reduce la magnitud de los coeficientes sin eliminarlos, manteniendo todas las variables en el modelo pero con menor impacto. Esto mejora la estabilidad del modelo frente a posibles correlaciones entre predictores.
+La elección de aplicar el modelo Lasso sobre este subconjunto de variables se basa en criterios de simplicidad y en el análisis exploratorio previo, evitando introducir ruido y facilitando la interpretación.
 
-La elección de aplicar Lasso y Ridge sobre este subconjunto de variables se basa en criterios de simplicidad y en el análisis exploratorio previo, evitando introducir ruido y facilitando la interpretación.
-
-En conjunto, Ridge mejora la estabilidad del modelo, mientras que Lasso permite obtener un modelo más simple sin una pérdida apreciable de capacidad explicativa.
+En conjunto, Lasso permite obtener un modelo más simple y fácilmente interpretable, seleccionando únicamente los predictores más relevantes sin una pérdida apreciable de capacidad explicativa.
 
 ### **Comparación:**
 
 ```{r}
-# Función unificada para calcular métricas (RMSE, MAE y R2)
+# Función para calcular métricas
 comparar_modelos <- function(reales, predicciones, modelo_obj = NULL, es_glmnet = FALSE) {
   rmse <- sqrt(mean((reales - predicciones)^2))
   mae  <- mean(abs(reales - predicciones))
   
-  # Extraer R2 (Ajustado para OLS, Dev.Ratio para Glmnet)
   if (es_glmnet) {
-    # Porcentaje de varianza explicada por el mejor lambda
-    r2 <- modelo_obj$glmnet.fit$dev.ratio[which(modelo_obj$lambda == modelo_obj$lambda.min)]
+    idx <- which.min(abs(modelo_obj$lambda - modelo_obj$lambda.min))
+    r2 <- modelo_obj$glmnet.fit$dev.ratio[idx]
   } else {
     r2 <- summary(modelo_obj)$adj.r.squared
   }
@@ -1371,35 +1362,36 @@ comparar_modelos <- function(reales, predicciones, modelo_obj = NULL, es_glmnet 
   return(c(RMSE = rmse, MAE = mae, R2_Ajustado = r2))
 }
 
-# Obtener predicciones de los 4 modelos sobre datos.train
-# A. Modelo Completo (Log) - 12+ variables
+
+# PREDICCIONES (TRAIN)
+
+# Modelo completo
 pred_completo <- predict(modelo_log, newdata = datos.train)
 
-# B. Modelo Reducido (OLS) - 5 variables (RH, ISI, temp, DC, DMC)
-pred_ols_red  <- predict(modelo_ols, newdata = datos.train)
+# Modelo reducido (OLS)
+pred_ols_red <- predict(modelo_ols, newdata = datos.train)
 
-# C. Modelo RIDGE (Regularización L2)
-x_mat <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)[, -1]
-pred_ridge    <- predict(cv_ridge, newx = x_mat, s = "lambda.min")
+# Modelo LASSO
+x_mat <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, 
+                      data = datos.train)[, -1]
 
-# D. Modelo LASSO (Regularización L1 - Selección de variables)
-pred_lasso    <- predict(cv_lasso, newx = x_mat, s = "lambda.min")
+pred_lasso <- predict(cv_lasso, newx = x_mat, s = "lambda.min")
 
-# Crear la Tabla Comparativa Final
+
+# TABLA COMPARATIVA
+
 tabla_final <- rbind(
   "1. Completo (Todas)" = comparar_modelos(datos.train$area_log, pred_completo, modelo_log),
   "2. Reducido (5 vars)" = comparar_modelos(datos.train$area_log, pred_ols_red, modelo_ols),
-  "3. Ridge (Estable)"  = comparar_modelos(datos.train$area_log, pred_ridge, cv_ridge, TRUE),
-  "4. Lasso (Óptimo)"   = comparar_modelos(datos.train$area_log, pred_lasso, cv_lasso, TRUE)
+  "3. Lasso (Óptimo)"   = comparar_modelos(datos.train$area_log, pred_lasso, cv_lasso, TRUE)
 )
 
-# Mostrar resultados redondeados
-round(tabla_final, 4)
+# Mostrar resultados
+round(tabla_final, 3)
 ```
+Tras evaluar los tres modelos, el modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el modelo completo presenta el menor error ($RMSE = 1.368$), su mayor complejidad puede aumentar el riesgo de sobreajuste. Por otro lado, Lasso presenta un rendimiento similar en términos de error, pero con un mayor $R^2$ ajustado (0.038) y una estructura más parsimoniosa.
 
-Tras evaluar las cuatro propuestas, el modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el modelo completo presenta el error más bajo ($RMSE = 1.3676$), su mayor complejidad puede aumentar el riesgo de sobreajuste. Por otro lado, Lasso logra un rendimiento similar al resto de modelos, alcanzando un $R^2$ ajustado superior (0.0347) y un error competitivo ($RMSE = 1.3910$), utilizando una estructura más simple.
-
-Al haber reducido a cero los coeficientes de las variables menos relevantes, Lasso ofrece una mejor capacidad de generalización y una interpretación más clara, centrada principalmente en la humedad relativa (RH), el índice de propagación (ISI) y DMC.
+Al haber reducido a cero los coeficientes de las variables menos relevantes, Lasso ofrece una interpretación más clara, centrada principalmente en la humedad relativa (RH), el índice de propagación (ISI) y DMC. Esto sugiere una mejor capacidad de generalización del modelo.
 
 ### Diagnosis del modelo elegido
 
