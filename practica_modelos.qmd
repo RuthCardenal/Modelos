@@ -1491,14 +1491,13 @@ cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.
 # Ver el resumen completo
 summary(modelo_multiple_orig)
 ```
+El modelo de regresión lineal múltiple con la variable original presenta una capacidad explicativa muy limitada (R² ajustado = -0.0256), lo que indica que las variables incluidas no aportan información relevante para explicar el área quemada.
 
-El modelo de regresión lineal múltiple con la variable original presenta una capacidad explicativa muy limitada (R² ajustado = -0.0256), indicando que las variables incluidas no aportan información útil para explicar el área quemada.
+Además, el modelo en conjunto no resulta significativo (p-valor global = 0.93), lo que confirma la falta de relación entre las variables explicativas y la variable respuesta.
 
-Además, el modelo en conjunto no resulta significativo (p-valor global = 0.93), lo que refuerza la falta de relación entre las variables explicativas y la variable respuesta.
+Ninguna de las variables resulta estadísticamente significativa, por lo que el modelo no es adecuado para explicar el área en su forma original.
 
-Ninguna de las variables resulta estadísticamente significativa, lo que sugiere que el modelo no es adecuado para explicar el área en su forma original.
-
-Por otro lado, el error estándar de los residuos es elevado (72.79), lo que indica una alta variabilidad en los errores y un bajo ajuste del modelo.
+Por último, el error estándar de los residuos es elevado (72.79), lo que indica una alta variabilidad en los errores y un bajo ajuste del modelo.
 
 ### 2º Modelo: Todas las variables originales con la variable objetivo transformada.
 
@@ -1981,7 +1980,30 @@ residualPlots(glm_fuego_opt)
 
 El modelo comete errores grandes en algunos casos. Esto significa que predice mal: puede decir que hay poco riesgo cuando en realidad sí lo hay, o la revés. Por ello, sería conveniente estudiar esos casos.
 
+
 ## 5. Comparación y evalución de modelos
+
+### Validación. FALTA
+
+Se divide el conjunto de datos en entrenamiento y validación. Los modelos se ajustan con los datos de entrenamiento y se comparan utilizando el conjunto de validación mediante el RMSE, seleccionando el modelo con menor error.
+
+```{r}
+pred1 <- predict(mod_rh, newdata = datos.valid)
+pred2 <- predict(cv_lasso, newdata = datos.valid)
+pred3 <- predict(modelo_final_log, newdata = datos.valid)
+```
+
+```{r}
+rmse1 <- sqrt(mean((validation$area_log - pred1)^2))
+rmse2 <- sqrt(mean((validation$area_log - pred2)^2))
+rmse3 <- sqrt(mean((validation$area_log - pred3)^2))
+rmse1
+rmse2
+rmse3
+```
+
+
+### Evaluación final (test) con el modelo elegido
 
 ```{r}
 # =========================================================================
@@ -2060,6 +2082,6 @@ Aunque los tres miembros del grupo hemos colaborado en la elaboración y revisi�
 
 -   Kimberly: Modelos lineales generalizados, EDA, modelos lineales, comparación de modelos y conclusiones. Revisión final.
 
--   Cristina: EDA, modelo lineal simple y múltiple, modelos lineales generalizados, comparación de modelos y conclusiones. Revisión final.
+-   Cristina: EDA, modelo lineal simple y múltiple, comparación de modelos, modelos lineales generalizados y conclusiones. Revisión final.
 
--   Ruth: Comparación de modelos, EDA, modelos lineales simple y múltiple, modelos lineales generalizados y conclusiones. Revisión final.
+-   Ruth: Comparación de modelos, modelos lineales simple y múltiple, EDA,  modelos lineales generalizados y conclusiones. Revisión final.
