@@ -818,13 +818,13 @@ ggplot(matriz_long, aes(x = Var1, y = Var2, fill = value)) +
   theme_minimal()
 ```
 
-Las gráficas muestran cómo interactúan las condiciones que influyen en los incendios. Por un lado, existe una relación negativa clara entre temperatura y humedad: cuando sube la temperatura, la humedad baja, creando condiciones de alto riesgo donde el combustible es más inflamable.
+Las gráficas muestran cómo interactúan las condiciones que influyen en los incendios. En primer lugar, destaca una relación negativa significativa entre la temperatura y la humedad relativa (≈ -0.53): cuando aumenta la temperatura, la humedad disminuye, favoreciendo condiciones más secas y propicias para la propagación del fuego.
 
-Por otro lado, el viento influye en la propagación del fuego (ISI), ya que a mayor viento, mayor velocidad de expansión, aunque con bastante variabilidad porque intervienen más factores. También destaca un valor extremo que se aleja del resto de datos.
+Por otro lado, se observa una relación positiva notable entre ISI y FFMC (≈ 0.54), lo que indica que la capacidad de propagación del fuego está asociada al estado del combustible fino. También destaca la alta correlación entre DMC y DC (≈ 0.68), así como su relación positiva con la temperatura (≈ 0.48), lo que refleja que la sequedad del combustible está fuertemente influida por condiciones térmicas.
 
-Finalmente, la matriz de correlación confirma que variables como temperatura y sequedad del suelo están muy relacionadas entre sí, pero el tamaño del incendio (area_log) no depende de una sola variable, sino de la combinación de varias.
+Finalmente, el tamaño del incendio (area_log) presenta correlaciones muy bajas con el resto de variables (cercanas a 0), lo que indica que no depende de una sola variable de forma lineal, sino de la combinación de varios factores.
 
-En conjunto, esto indica que los incendios grandes son fenómenos complejos, donde intervienen múltiples factores al mismo tiempo.
+En conjunto, estos resultados sugieren que los incendios grandes son fenómenos complejos donde intervienen múltiples variables simultáneamente, más que una única condición dominante.
 
 ### PREGUNTAS
 
@@ -851,6 +851,8 @@ Las correlaciones lineales con el tamaño del incendio (area_log) son muy débil
 ## Modelos lineales simples
 
 Se seleccionan aquellas variables que presentan mayor relación con la variable objetivo, basándose en el análisis exploratorio previo (EDA), con el fin de evaluar su efecto individual sobre el área quemada. Posteriormente, se ajusta un modelo de regresión lineal simple para cada variable seleccionada.
+
+No obstante, dado que las correlaciones entre las variables explicativas y la variable respuesta son muy bajas (todas cercanas a 0), no se observa una relación lineal fuerte con la variable respuesta. Por este motivo, el análisis mediante modelos de regresión lineal simple presenta una capacidad explicativa reducida, por lo que se seleccionan únicamente algunas variables representativas para ilustrar el comportamiento del modelo.
 
 ### Entre 'RH' y 'area_log'
 
@@ -1175,21 +1177,23 @@ reset_resultado <- resettest(mod_temp, power = 2:3, type = "fitted")
 print(reset_resultado)
 ```
 
-El test RESET de Ramsey arroja un p-valor de 0.000118, el cual es ignificativamente inferior al nivel de significancia estándar (\$\\alpha = 0.05\$). Al ser estadísticamente significativo, se rechaza la hipótesis nula de linealidad, lo que indica que la forma funcional del modelo es inadecuada y existe una mala especificación grave.Este resultado sugiere que la relación entre las variables meteorológicas y el área quemada no es puramente lineal, y que el modelo podría beneficiarse de la inclusión de términos no lineales (como potencias o interacciones) o de una reevaluación de las transformaciones aplicadas. Los gráficos de diagnóstico confirman esta conclusión, mostrando una curvatura persistente en los residuos que invalida el uso de un modelo lineal simple para realizar estimaciones de confianza en este escenario.
+El test RESET de Ramsey arroja un p-valor de 0.000118, el cual es ignificativamente inferior al nivel de significancia estándar (\$\\alpha = 0.05\$). Al ser estadísticamente significativo, se rechaza la hipótesis nula de linealidad, lo que indica que la forma funcional del modelo es inadecuada y existe una mala especificación grave. Este resultado sugiere que la relación entre las variables meteorológicas y el área quemada no es puramente lineal, y que el modelo podría beneficiarse de la inclusión de términos no lineales (como potencias o interacciones) o de una reevaluación de las transformaciones aplicadas. Los gráficos de diagnóstico confirman esta conclusión, mostrando una curvatura persistente en los residuos que invalida el uso de un modelo lineal simple para realizar estimaciones de confianza en este escenario.
 
 **Elección modelo simple:**
 
 ```{r}
-# Función para extraer métricas de un modelo lineal
 obtener_metricas <- function(modelo) {
+  res <- residuals(modelo)
   s <- summary(modelo)
-  rmse <- sqrt(mean(modelo$residuals^2))
-  mae <- mean(abs(modelo$residuals))
+  
+  rmse <- sqrt(mean(res^2))
+  mae  <- mean(abs(res))
   r2_adj <- s$adj.r.squared
+  
   return(c(RMSE = rmse, MAE = mae, R2_Adj = r2_adj))
 }
 
-# Creamos la tabla comparativa
+# Tabla comparativa
 comparativa_simples <- rbind(
   Modelo_RH   = obtener_metricas(mod_rh),
   Modelo_Temp = obtener_metricas(mod_temp)
@@ -1202,7 +1206,7 @@ Tras comparar los modelos de Humedad Relativa (RH) y temperatura, el modelo de R
 
 ## Modelos lineales múltiples
 
-Se consideran variables meteorológicas e índices de combustible para modelar el área quemada.
+Se han incluido todas las variables explicativas en el modelo de regresión múltiple con el objetivo de analizar su efecto conjunto sobre la variable respuesta, ya que, aunque individualmente presentan una baja correlación, podrían aportar información relevante cuando se consideran de forma conjunta.
 
 ### 1º Modelo: Todas las variables originales.
 
@@ -1219,8 +1223,9 @@ cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.
 # Ver el resumen completo
 summary(modelo_multiple_orig)
 ```
+El modelo presenta un ajuste deficiente, con un $R^2$ ajustado de 0.01275, lo que indica que explica una proporción muy reducida de la variabilidad de la variable respuesta. Además, el modelo no resulta significativo de forma global ($p=0.2329$), por lo que el conjunto de variables no tiene capacidad explicativa conjunta.
 
-El modelo de regresión lineal múltiple aplicado sobre el área original presenta un ajuste deficiente, con un $R^2$ ajustado de apenas 0.01275 y una falta de significancia global ($p = 0.329$). Estos resultados indican que la variabilidad del área quemada no puede ser explicada de manera lineal por el conjunto de predictores meteorológicos seleccionados. Únicamente el índice DMC mostró una relación estadísticamente significativa con la variable respuesta ($p < 0.05$). La incapacidad del modelo para capturar la complejidad del fenómeno confirma que la relación entre las condiciones ambientales y la magnitud de los incendios es altamente no lineal.
+A nivel individual, únicamente la variable DMC resulta estadísticamente significativa ($p=0.0207$), mientras que el resto de variables no presentan efectos significativos.
 
 ### 2º Modelo: Todas las variables originales con la variable objetivo transformada.
 
@@ -1257,18 +1262,17 @@ mae <- mean(abs(datos.train$area_log - pred))
 rmse
 mae
 ```
+El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa ($R^2$ ajustado = 0.0213), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
 
-El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa (R² ajustado = 0.02588), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
+El test F no es significativo al 5% (p=0.1374), por lo que el modelo en conjunto no resulta significativo.
 
-El test F no es significativo al 5% (p = 0.1012), por lo que el modelo en conjunto no resulta significativo.
+Solo la variable DMC resulta significativa (p=0.0331), mientras que la mayoría no presentan efecto estadísticamente significativo. Esto indica la posible presencia de variables irrelevantes y la necesidad de simplificar el modelo.
 
-Solo la variable DMC resulta significativa, mientras que la mayoría no presentan efecto estadísticamente significativo. Esto indica la posible presencia de variables irrelevantes y la necesidad de simplificar el modelo.
-
-El modelo con transformación logarítmica presenta menores errores (RMSE = 1.36436, MAE = 1.117) que el modelo sin transformar, aunque no son directamente comparables por estar en distintas escalas.
+El modelo con transformación logarítmica presenta menores errores (RMSE = 1.36756, MAE = 1.12219) que el modelo sin transformar (RMSE = 52.16465, MAE = 19.33335), aunque no son directamente comparables por estar en distintas escalas.
 
 En conjunto, el modelo mejora con la transformación logarítmica, aunque su capacidad explicativa sigue siendo limitada.
 
-### 3º Modelo: **VIF**
+### 3º Modelo: VIF
 
 ```{r}
 # Cargar la librería necesaria
@@ -1305,7 +1309,7 @@ vif_summary <- data.frame(
 print(vif_summary)
 ```
 
-Para garantizar la estabilidad de los coeficientes del modelo multivariante, se ha calculad el VIF. Todos los valores VIF se encuentran significativamente por debajo del umbral crítico de **5** (y muy lejos del límite de 10). Esto indica que no existe multicolinealidad entre los predictores.
+Para garantizar la estabilidad de los coeficientes del modelo multivariante, se ha calculad el VIF. Todos los valores VIF se encuentran significativamente por debajo del umbral crítico de 5 (y muy lejos del límite de 10). Esto indica que no existe multicolinealidad entre los predictores.
 
 ### 4º Modelo: Lasso
 
@@ -1336,9 +1340,11 @@ print(output)
 
 ```
 
-Los resultados de Lasso funcionan como un mecanismo de selección automática de variables: al aplicar la penalización óptima, el modelo ha reducido prácticamente a cero los coeficientes de DC y DMC. Esto indica que estas variables no aportan información predictiva relevante para el área quemada y pueden ser descartadas. En consecuencia, Lasso simplifica la estructura del modelo dejando únicamente a la humedad relativa (RH), al índice ISI y a temp como predictores activos, lo que genera un modelo más robusto y menos propenso al ruido.
+Los resultados de Lasso actúan como un mecanismo de selección automática de variables: al aplicar la penalización óptima, el modelo ha reducido a cero los coeficientes de temp (0.000) y DC (0.000). Esto indica que estas variables no aportan información predictiva relevante para el área quemada y pueden ser descartadas.
 
-Nota: La elección de aplicar el modelo Lasso específicamente sobre este subconjunto de variables (RH, ISI, temp, DC y DMC) responde a una estrategia de optimización y parsimonia, fundamentada en los hallazgos del análisis exploratorio (EDA). Al seleccionar estos predictores, se priorizan las variables con mayor variabilidad y relevancia física para la propagación del fuego, evitando introducir "ruido" con variables de varianza casi nula (como rain) o coordenadas espaciales que podrían distorsionar la interpretación climática. Además, esta selección actúa como una barrera contra la multicolinealidad, ya que permite que el algoritmo Lasso gestione de forma eficiente la redundancia de información entre los índices de sequía y las condiciones hidrotérmicas, forzando a cero aquellos coeficientes que no aportan un valor predictivo marginal significativo y logrando así un modelo más robusto, interpretable y con mayor capacidad de generalización.
+En consecuencia, Lasso simplifica la estructura del modelo manteniendo como predictores activos la humedad relativa (RH = -0.007), el índice ISI = -0.003 y DMC = 0.002, lo que da lugar a un modelo más simple.
+
+Nota: La elección de aplicar el modelo Lasso sobre este subconjunto de variables (RH, ISI, temp, DC y DMC) responde a un criterio de simplicidad basado en el análisis exploratorio. Estas variables recogen información relevante sobre las condiciones meteorológicas, mientras que otras variables fueron descartadas para evitar introducir ruido. Además, Lasso permite gestionar la redundancia entre variables, eliminando automáticamente aquellas cuyo aporte es nulo y dando lugar a un modelo más sencillo e interpretable.
 
 ### **Comparación:**
 
@@ -1385,7 +1391,9 @@ tabla_final <- rbind(
 round(tabla_final, 4)
 ```
 
-Tras evaluar las cuatro propuestas, el Modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el Modelo Completo presenta el error más bajo (\$RMSE = 1.3676\$), su excesiva complejidad eleva el riesgo de sobreajuste. Por el contrario, Lasso logra optimizar el rendimiento frente al modelo reducido de 5 variables, alcanzando un \$R\^2\$ Ajustado superior (0.0375) y un error competitivo (\$RMSE = 1.3890\$) utilizando una estructura mínima. Al haber reducido a cero los coeficientes de las variables menos relevantes, Lasso ofrece la mejor capacidad de generalización y una interpretación técnica clara para la gestión forestal, centrada exclusivamente en los motores principales: la Humedad Relativa (RH), el Índice de Propagación (ISI) y la temperatura (temp).
+Tras evaluar las cuatro propuestas, el modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el modelo completo presenta el error más bajo ($RMSE = 1.3676$), su mayor complejidad puede aumentar el riesgo de sobreajuste. Por otro lado, Lasso logra un rendimiento similar al resto de modelos, alcanzando un $R^2$ ajustado superior (0.0347) y un error competitivo ($RMSE = 1.3910$), utilizando una estructura más simple.
+
+Al haber reducido a cero los coeficientes de las variables menos relevantes, Lasso ofrece una mejor capacidad de generalización y una interpretación más clara, centrada principalmente en la humedad relativa (RH), el índice de propagación (ISI) y DMC.
 
 ### Diagnosis del modelo elegido
 
@@ -1451,9 +1459,11 @@ avPlots(modelo_ols,
 par(mfrow = c(1,1))
 ```
 
-Las gráficas de componente + residuo y de regresión parcial permiten analizar la relación entre cada variable explicativa y la respuesta teniendo en cuenta el resto de variables. En general, se observa que las relaciones son aproximadamente lineales, por lo que el modelo lineal parece adecuado. La variable temp muestra una relación positiva más clara, mientras que DMC también presenta cierta tendencia positiva. Por el contrario, RH e ISI tienen una relación débil y DC apenas aporta información.
+Las gráficas de componente + residuo y de regresión parcial permiten analizar la relación entre cada variable explicativa y la variable respuesta teniendo en cuenta el efecto del resto de variables. En conjunto, se observa que las relaciones son aproximadamente lineales, aunque con cierta dispersión.
 
-Las gráficas de regresión parcial confirman estos resultados: temp y, en menor medida, DMC son las variables más relevantes, mientras que el resto presentan poca influencia. También se detectan algunos posibles valores atípicos, como 238, 277, o 416 que se alejan del patrón general.
+La variable DMC presenta una tendencia positiva clara, mientras que temp muestra una relación débil. Por otro lado, RH e ISI presentan una ligera tendencia negativa, y DC no muestra una relación clara con la variable respuesta.
+
+Las gráficas de regresión parcial confirman estos resultados: DMC es la variable con mayor relación positiva, mientras que el resto presentan una influencia reducida. Además, se observan algunos valores atípicos, como las observaciones 238, 277 o 416, que se alejan del patrón general.
 
 Por último, en el gráfico Q-Q se aprecian desviaciones respecto a la recta, especialmente en los extremos, lo que indica que la normalidad de los residuos no se cumple completamente. Para comprobarlo realizamos el test de Shapiro Wilk:
 
@@ -1461,7 +1471,7 @@ Por último, en el gráfico Q-Q se aprecian desviaciones respecto a la recta, es
 shapiro.test(residuals(modelo_ols))
 ```
 
-Rechazamos la hipótesis nula (p_valor \< 0.05): no cumple el supuesto de normalidad.
+Rechazamos la hipótesis nula (p_valor \< 0.05), es decir, no cumple el supuesto de normalidad.
 
 Finalmente, al no cumplirse el supuesto de normalidad de los residuos, el modelo no resulta adecuado. En consecuencia, no hace falta seguir analizando el resto de supuestos.
 
