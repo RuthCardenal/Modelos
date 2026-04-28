@@ -610,6 +610,10 @@ ggplot(datos.train, aes(x = wind, y = area_log)) +
   theme_minimal()
 ```
 
+El gráfico muestra que cuando aumenta el FFMC (es decir, cuando el combustible está más seco), el área quemada tiende a aumentar ligeramente.
+
+Sin embargo, la relación es muy débil, porque los puntos están muy dispersos. Para un mismo valor de FFMC hay incendios muy pequeños y otros bastante grandes.
+
 #### Relación entre FFMC y el área quemada (escala logarítmica).
 
 ```{r}
@@ -1693,7 +1697,9 @@ Hay un outlier que está causando que la gráfica del linear predictor y del rai
 
 # 5. COMPARACIÓN Y EVALUACIÓN DE MODELOS
 
-## Comparar modelos elegidos con validación:
+## Comparar modelos elegidos:
+
+### Modelos de Regresión:
 
 ```{r}
 
@@ -1708,7 +1714,7 @@ datos.valid$fuego <- factor(ifelse(datos.valid$area > 0, "present", "absent"),
 
 # Aseguramos que las variables binarias existan en test
 datos.valid$rain_bin <- ifelse(datos.valid$rain > 0, 1, 0)
-datos.valid$day_bin <- ifelse(datos.valid$day %in% c("sat", "sun", "fri", "thu"), 1, 0)
+datos.valid$day_bin <- ifelse(datos.valid$day %in% c("sat", "sun", "fri"), 1, 0)
 
 # 2. GENERACIÓN DE PREDICCIONES 
 
@@ -1721,37 +1727,54 @@ pred_rh <- predict(modelo_simple_final, newdata = datos.valid)
 X_test_lasso <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.valid)[, -1]
 pred_lasso <- as.numeric(predict(cv_lasso, newx = X_test_lasso, s = "lambda.min"))
 
-# C. Modelo Logístico
-prob_log <- predict(glm_fuego_opt, newdata = datos.valid, type = "response")
-clase_log <- factor(ifelse(prob_log > 0.5, "present", "absent"), levels = c("absent", "present"))
-
 
 # 3. CÁLCULO DE MÉTRICAS Y TABLA FINAL
 
 rmse_rh <- sqrt(mean((datos.valid$area_log - pred_rh)^2))
 rmse_lasso <- sqrt(mean((datos.valid$area_log - pred_lasso)^2))
 
-acc_rh <- mean(factor(ifelse(pred_rh > 0, "present", "absent"), levels = c("absent", "present")) == datos.valid$fuego)
-acc_lasso <- mean(factor(ifelse(pred_lasso > 0, "present", "absent"), levels = c("absent", "present")) == datos.valid$fuego)
-acc_log <- mean(clase_log == datos.valid$fuego)
 
 # Tabla limpia
 tabla_final <- data.frame(
-  Modelo = c("Regresión Simple (RH)", "Lasso (Óptimo)", "Regresión Logística"),
-  RMSE_Test = c(rmse_rh, rmse_lasso, NA),
-  Accuracy_Test = c(acc_rh, acc_lasso, acc_log)
+  Modelo = c("Regresión Simple (RH)", "Lasso (Óptimo)"),
+  RMSE_Test = c(rmse_rh, rmse_lasso)
 )
 
-print(round(tabla_final[, 2:3], 4))
+tabla_final$RMSE_Test <- round(tabla_final$RMSE_Test, 4)
+print(tabla_final)
 ```
 
-La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.2846 y un MAE de 0.4923, resultados que confirman una sólida capacidad de generalización y la ausencia de sobreajuste. La estrecha relación entre ambas métricas indica que el modelo es robusto ante la variabilidad de los datos, logrando que el error promedio en las predicciones del área quemada (en escala logarítmica) se mantenga estable. Estos valores validan la efectividad de haber priorizado variables críticas como la humedad relativa y el ISI, consolidando a Lasso como la herramienta más fiable y equilibrada para la estimación del riesgo forestal frente a los modelos de regresión simple o logísticos tradicionales.
+La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.3019, resultado que confirma una sólida capacidad de generalización y la ausencia de sobreajuste. Este valor valida la efectividad de haber priorizado variables críticas como la humedad relativa, el ISI y la temperatura.
 
-Nota: Se ha incluido el Accuracy en los modelos de regresión mediante la binarización de sus predicciones (considerando cualquier valor $> 0$ como presencia de incendio).
+### Modelo de regresión generalizada:
 
-Nota: El valor NA en la métrica RMSE del modelo logístico se debe a la naturaleza cualitativa de su variable respuesta. Al ser un modelo de clasificación que predice categorías (presencia/ausencia) y no cantidades numéricas, el cálculo del error cuadrático medio no es aplicable, a diferencia de los modelos Lasso y de regresión simple.
+```{r}
 
-## Evaluación final (test) con el mejor modelo:
+# Crear la variable objetivo binaria 
+datos.valid$fuego <- factor(ifelse(datos.valid$area > 0, "present", "absent"), 
+                           levels = c("absent", "present"))
+
+datos.valid$month <- factor(datos.valid$month, levels = levels(datos.train$month))
+datos.valid$day   <- factor(datos.valid$day, levels = levels(datos.train$day))
+
+datos.valid$rain_bin <- ifelse(datos.valid$rain > 0, 1, 0)
+
+
+prob_log_valid <- predict(glm_fuego_opt, newdata = datos.valid, type = "response")
+
+clase_log_valid <- factor(ifelse(prob_log_valid > 0.5, "present", "absent"), 
+                          levels = c("absent", "present"))
+
+acc_log_valid <- mean(clase_log_valid == datos.valid$fuego)
+
+cat("El Accuracy en el conjunto de Validación es:", round(acc_log_valid, 4), "\n")
+```
+
+Un Accuracy de 0.4385 (43.85%) indica que el modelo acierta menos de la mitad de las veces. En términos estadísticos, esto significa que el modelo está funcionando peor que el azar (que sería un 50% en una clasificación binaria de "fuego" vs "no fuego").
+
+En conclusión, podemos observar que el modelo de regresión simple (RH) tiene menor RMSE que Lasso pero como ambos tienen RMSE errores parecidos, por interpretación elegimos Lasso.
+
+## Evaluación final con el mejor modelo:
 
 ```{r}
 
@@ -1771,7 +1794,7 @@ datos.test$meses_frio  <- ifelse(datos.test$month %in% frio, 1, 0)
 
 # C. Binarización de Variables (Lluvia y Día de la semana)
 datos.test$rain_bin <- ifelse(datos.test$rain > 0, 1, 0)
-datos.test$day_bin  <- ifelse(datos.test$day %in% c("thu", "fri", "sat", "sun"), 1, 0)
+datos.test$day_bin  <- ifelse(datos.test$day %in% c( "fri", "sat", "sun"), 1, 0)
 
 # D. Transformación de la Variable Objetivo
 datos.test$area_log <- log1p(datos.test$area)
@@ -1810,7 +1833,7 @@ round(comparativa_final, 4)
 
 La evaluación final del modelo Lasso muestra una alta consistencia y estabilidad, con un RMSE de 1.3890 en entrenamiento y 1.4891 en prueba, lo que confirma la ausencia de sobreajuste (overfitting) y una sólida capacidad de generalización. La mínima diferencia entre ambos errores, junto con un MAE de 1.2139 en el conjunto de prueba, valida que la estrategia de regularización y la selección de variables clave (RH e ISI) permiten predecir la magnitud del incendio de forma equilibrada. En conclusión, estos resultados certifican que el modelo es técnicamente robusto y fiable para su aplicación en condiciones reales en el Parque de Montesinho.
 
-# CONCLUSIONES Y TRABAJO A FUTURO
+# 6. CONCLUSIONES Y TRABAJO A FUTURO
 
 El análisis integral del dataset Forest Fires del Parque Natural de Montesinho permite extraer las siguientes conclusiones fundamentales sobre la dinámica de los incendios y la eficacia de los modelos estadísticos aplicados:
 
