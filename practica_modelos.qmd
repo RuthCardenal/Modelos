@@ -577,6 +577,8 @@ Sin embargo, la dispersión de los datos es elevada y no se observa un patrón c
 
 #### Relación entre la lluvia y el área quemada (escala logarítmica).
 
+##### rain
+
 ```{r}
 ggplot(datos.train, aes(x = rain, y = area_log)) +
   geom_point(color = "steelblue", alpha = 0.5) +
@@ -590,6 +592,18 @@ ggplot(datos.train, aes(x = rain, y = area_log)) +
 El gráfico muestra una alta concentración de observaciones en valores de lluvia iguales a cero, lo que indica que la mayoría de los incendios ocurren en ausencia de precipitaciones. La dispersión de los datos es elevada y no se observa un patrón claro entre la lluvia y el área quemada.
 
 La línea de tendencia presenta una ligera pendiente negativa, lo que podría sugerir que, a mayor cantidad de lluvia, el área quemada tiende a disminuir. Sin embargo, esta relación es muy débil y poco representativa debido a la escasa variabilidad de la variable rain y al predominio de valores nulos.
+
+##### rain_bin
+```{r}
+ggplot(datos.train, aes(x = rain_bin, y = area_log)) +
+  geom_point(color = "steelblue", alpha = 0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  labs(title = "Relación entre la lluvia (binaria) y el área quemada (escala logarítmica)",
+       x = "Lluvia (mm/m²)",
+       y = "log(area + 1)") +
+  theme_minimal()
+```
+Podemos observar que no hay grandes diferencias entre ambos gráficos, por lo que se obtienen las mismas conclusiones que las mencionadas anteriormente.
 
 #### Relación entre la velocidad del viento y el área quemada (escala logarítmica).
 
@@ -1458,7 +1472,7 @@ Se consideran variables meteorológicas e índices de combustible para modelar e
 
 ```{r}
 # Modelo múltiple con todas las variables (área original)
-modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + meses_calor + meses_frio+ day_bin, 
+modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + meses_calor + meses_frio + day_bin, 
                            data = datos.train)
 
 # Comparación de modelos
@@ -1486,7 +1500,7 @@ Se introduce este nuevo modelo debido a que la variable $area$ presenta fuerte a
 
 ```{r}
 modelo_log <- lm(
-  area_log ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain + month + day,
+  area_log ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + meses_frio + meses_calor + day_bin,
   data = datos.train
 )
 
@@ -1513,14 +1527,13 @@ mae <- mean(abs(datos.train$area_log - pred))
 rmse
 mae
 ```
+El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa (R² ajustado = 0.03534), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
 
-El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa (R² ajustado = 0.0456), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
+El test F no es significativo al 5% (p = 0.05119), aunque está muy cercano al nivel de significación, lo que indica que el modelo en conjunto no resulta claramente significativo.
 
-El test F no es significativo al 5% (p = 0.071), lo que indica que el modelo en conjunto no resulta significativo.
+Solo la variable X resulta significativa, mientras que la mayoría no presentan efecto estadísticamente significativo. Esto indica la posible presencia de variables irrelevantes y la necesidad de simplificar el modelo.
 
-Solo algunas variables son significativas, como la temperatura, la coordenada X y el mes de diciembre, mientras que la mayoría no tienen efecto estadísticamente significativo. Esto indica la posible presencia de variables irrelevantes y la necesidad de simplificar el modelo.
-
-El modelo con transformación logarítmica presenta menores errores (RMSE = 1.284, MAE = 1.043) que el modelo sin transformar, aunque no son directamente comparables por estar en distintas escalas.
+El modelo con transformación logarítmica presenta menores errores (RMSE = 1.287, MAE = 1.047) que el modelo sin transformar, aunque no son directamente comparables por estar en distintas escalas.
 
 En conjunto, el modelo mejora con la transformación logarítmica, aunque su capacidad explicativa sigue siendo limitada.
 
@@ -1530,29 +1543,28 @@ En conjunto, el modelo mejora con la transformación logarítmica, aunque su cap
 # Cargar la librería necesaria
 suppressPackageStartupMessages(library(car))
 
-# 1. Selección de variables predictoras (ajusta los nombres a tus columnas)
-# Usaremos las que hemos analizado: RH, ISI, temp y quizá las de sequedad (DC, DMC)
-# IMPORTANTE: No incluyas la variable objetivo 'area_log' aquí dentro.
+# Seleccionamos las variables predictoras 
+
+# IMPORTANTE: No hay que meter la variable objetivo 'area_log' aquí dentro.
 predictores <- datos.train[, c("RH", "ISI", "temp", "DC", "DMC")] 
 
-# 2. Análisis de varianza (opcional pero recomendado)
-# Detecta si alguna variable es casi constante
+# Análisis de varianza 
 varianzas <- apply(predictores, 2, var)
 print("Varianzas de los predictores:")
 print(round(varianzas, 4))
 
-# 3. Cálculo del VIF
+# Cálculo del VIF
 # Creamos un modelo lineal que use todas las variables seleccionadas
 modelo_vif <- lm(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)
 
 # Calculamos los valores VIF
 vif_valores <- vif(modelo_vif)
 
-# 4. Mostrar resultados de forma limpia
+# Mostrar resultados 
 print("Valores VIF:")
 print(round(vif_valores, 2))
 
-# 5. Interpretación automática
+# Interpretación 
 vif_summary <- data.frame(
   Variable = names(vif_valores),
   VIF = round(vif_valores, 2),
@@ -1569,22 +1581,22 @@ Para garantizar la estabilidad de los coeficientes del modelo multivariante, se 
 ```{r}
 library(glmnet)
 
-# 1. Preparar las matrices
+# Preparar las matrices
 X <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)[, -1]
 Y <- datos.train$area_log
 
-# 2. EJECUTAR RIDGE (alpha = 0)
+# EJECUTAR RIDGE (alpha = 0)
 set.seed(123)
 cv_ridge <- cv.glmnet(X, Y, alpha = 0,standardize=TRUE) 
 
-# 3. EJECUTAR LASSO (alpha = 1)
+# EJECUTAR LASSO (alpha = 1)
 set.seed(123)
 cv_lasso <- cv.glmnet(X, Y, alpha = 1,standardize=TRUE)
 
-# 4. EJECUTAR OLS (Regresión normal para comparar)
+# EJECUTAR OLS (Regresión normal para comparar)
 modelo_ols <- lm(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)
 
-# 5. CREAR LA TABLA COMPARATIVA
+# CREAR LA TABLA COMPARATIVA
 # Ahora sí, todos los objetos (modelo_ols, cv_ridge y cv_lasso) existen
 output <- cbind(
   OLS   = round(coef(modelo_ols), 3),
@@ -1592,7 +1604,7 @@ output <- cbind(
   LASSO = round(as.matrix(coef(cv_lasso, s = "lambda.min")), 3)
 )
 
-# 6. Ver el resultado
+# Ver el resultado
 print(output)
 
 ```
@@ -1602,7 +1614,7 @@ Los resultados de Lasso funcionan como un mecanismo de selección automática de
 ### **Comparación:**
 
 ```{r}
-# 1. Función unificada para calcular métricas (RMSE, MAE y R2)
+# Función unificada para calcular métricas (RMSE, MAE y R2)
 comparar_modelos <- function(reales, predicciones, modelo_obj = NULL, es_glmnet = FALSE) {
   rmse <- sqrt(mean((reales - predicciones)^2))
   mae  <- mean(abs(reales - predicciones))
@@ -1618,7 +1630,7 @@ comparar_modelos <- function(reales, predicciones, modelo_obj = NULL, es_glmnet 
   return(c(RMSE = rmse, MAE = mae, R2_Ajustado = r2))
 }
 
-# 2. Obtener predicciones de los 4 modelos sobre datos.train
+# Obtener predicciones de los 4 modelos sobre datos.train
 # A. Modelo Completo (Log) - 12+ variables
 pred_completo <- predict(modelo_log, newdata = datos.train)
 
@@ -1632,7 +1644,7 @@ pred_ridge    <- predict(cv_ridge, newx = x_mat, s = "lambda.min")
 # D. Modelo LASSO (Regularización L1 - Selección de variables)
 pred_lasso    <- predict(cv_lasso, newx = x_mat, s = "lambda.min")
 
-# 3. Crear la Tabla Comparativa Final
+# Crear la Tabla Comparativa Final
 tabla_final <- rbind(
   "1. Completo (Todas)" = comparar_modelos(datos.train$area_log, pred_completo, modelo_log),
   "2. Reducido (5 vars)" = comparar_modelos(datos.train$area_log, pred_ols_red, modelo_ols),
@@ -1640,7 +1652,7 @@ tabla_final <- rbind(
   "4. Lasso (Óptimo)"   = comparar_modelos(datos.train$area_log, pred_lasso, cv_lasso, TRUE)
 )
 
-# 4. Mostrar resultados redondeados
+# Mostrar resultados redondeados
 round(tabla_final, 4)
 ```
 
