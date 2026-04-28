@@ -18,7 +18,7 @@ Dataset: <https://archive.ics.uci.edu/dataset/162/forest+fires>
 
 Los incendios forestales representan un problema medioambiental crítico, ya que generan severos daños económicos y ecológicos, además de poner en peligro vidas humanas. En este contexto, la detección temprana y la capacidad de predicción son elementos clave para mitigar y controlar este tipo de fenómenos. Los datos analizados fueron recolectados en el Parque Natural de Montesinho, ubicado en Portugal, donde para cada registro de incendio se capturaron las condiciones climáticas mediante una estación meteorológica local en el momento exacto en que se detectó el incidente.
 
-El objetivo principal de este análisis es predecir la variable area, la cual expresa la superficie total quemada en hectáreas; es importante notar que esta variable suele presentar muchos valores cercanos a cero, lo que indica incendios que fueron controlados rápidamente antes de expandirse. Cabe destacar que el conjunto de datos no presenta valores faltantes.
+El objetivo principal de este análisis es predecir la variable *area*, la cual expresa la superficie total quemada en hectáreas; es importante notar que esta variable suele presentar muchos valores cercanos a cero, lo que indica incendios que fueron controlados rápidamente antes de expandirse. Cabe destacar que el conjunto de datos no presenta valores faltantes.
 
 ------------------------------------------------------------------------
 
@@ -30,7 +30,7 @@ El objetivo principal de este análisis es predecir la variable area, la cual ex
 
 -   **Y:** Variable numérica discreta que representa la coordenada espacial en el eje vertical (norte-sur) dentro del mapa del Parque de Montesinho. Toma valores enteros del 2 al 9, indicando la posición vertical en la cuadrícula. Ayuda a identificar en qué sección del mapa, de sur a norte, se encuentra el incidente.
 
--   **FFMC (Fine Fuel Moisture Code):** Variable numérica continua que forma parte del sistema canadiense FWI (Fire Weather Index). Este índice estima el contenido de humedad del combustible fino superficial (lo secos que están los materiales más pequeños y ligeros del suelo del bosque, como hojas secas, pequeñas ramas). Representa la facilidad con la que puede iniciarse un incendio forestal. En el dataset, los valores van de 18.7 a 96.20, donde los valotes cerca de 18.7 significa que los combustibles finos (hojas secas, pasto) están muy empapados y el riesgo de ignición es casi nulo. Mientras que si, está cerca de 96.20 significa que el combustible está extremadamente seco. Cualquier chispa, por pequeña que sea, provocará un incendio inmediato.
+-   **FFMC (Fine Fuel Moisture Code):** Variable numérica continua que forma parte del sistema canadiense FWI (Fire Weather Index). Este índice estima el contenido de humedad del combustible fino superficial (lo secos que están los materiales más pequeños y ligeros del suelo del bosque, como hojas secas o pequeñas ramas). Representa la facilidad con la que puede iniciarse un incendio forestal. En el dataset, los valores van de 18.7 a 96.20, donde los valores cerca de 18.7 significa que los combustibles finos (hojas secas, pasto) están muy empapados y el riesgo de ignición es casi nulo. Mientras que si está cerca de 96.20 significa que el combustible está extremadamente seco. Cualquier chispa, por pequeña que sea, provocará un incendio inmediato.
 
 -   **DMC (Duff Moisture Code):** Variable numérica continua que mide el contenido de humedad de las capas medias de materia orgánica descompuesta (humus). Refleja la sequedad acumulada en periodos de duración intermedia (semanas). En este dataset, los valores oscilan entre 1.1 y 291.3, donde valores más altos indican mayor sequedad y una mayor probabilidad de que el fuego se mantenga activo y sea difícil de extinguir.
 
@@ -40,11 +40,11 @@ El objetivo principal de este análisis es predecir la variable area, la cual ex
 
 -   **temp (Temperatura):** Variable numérica continua que mide la temperatura ambiente en grados Celsius (°C). En el dataset, los valores oscilan entre 2.2 y 33.30 °C, y representan la medición capturada en el momento en que se registró el incendio.
 
--   **RH (Relative Humidity):** Variable numérica continua. Es la relación entre la cantidad de vapor de agua que tiene el aire y la cantidad máxima que podría contener a esa misma temperatura. Se mide de **15% a 100%.**
+-   **RH (Relative Humidity):** Variable numérica continua. Es la relación entre la cantidad de vapor de agua que tiene el aire y la cantidad máxima que podría contener a esa misma temperatura. Se mide de **15% a 100%**.
 
 -   **wind (Velocidad del aire):** Variable numérica continua. Representa la velocidad del viento medida en el exterior del parque. El viento es un factor clave porque aporta oxígeno a la combustión y transporta brasas, creando nuevos focos. En este dataset, los valores son relativamente bajos, lo que sugiere brisas moderadas. A mayor velocidad, la propagación del incendio es más errática y rápida.
 
--   **rain (Precipitación exterior):** Variable numérica continua. Representa la cantidad de lluvia caída por metro cuadrado en el momento del registro. En el dataset, los valores van de 0.0 a 6.4 mm/m².Valores cercanos a 0 indican sequedad, lo que favorece la ignición y propagación del incendio; valores más altos aumentan la humedad y dificultan su expansión.
+-   **rain (Precipitación exterior):** Variable numérica continua. Representa la cantidad de lluvia caída por metro cuadrado en el momento del registro. En el dataset los valores van de 0.0 a 6.4 mm/m². Valores cercanos a 0 indican sequedad, lo que favorece la ignición y propagación del incendio; valores más altos aumentan la humedad y dificultan su expansión.
 
 -   **area (Superficie quemada):** Variable numérica continua. Es la variable que se busca explicar y predecir a partir de la interacción de los factores meteorológicos, geográficos y los índices de combustible mencionados anteriormente. Representa la magnitud del impacto ambiental mediante la medición de la extensión total de terreno forestal afectada por el fuego. Está expresada en hectáreas (ha), con valores que oscilan entre 0.00 y 1090.84 ha. Los valores de 0.00 indican incendios que fueron detectados y controlados de forma inmediata, afectando una superficie tan reducida que no resulta medible en hectáreas, mientras que los valores más elevados corresponden a incendios de gran magnitud que lograron propagarse bajo condiciones críticas.
 
@@ -64,6 +64,7 @@ datos <- read.csv("forestfires.csv")
 print(datos)
 dim(datos)    
 head(datos)
+set.seed(123)
 ```
 
 #### Cargamos las librerías:
@@ -83,6 +84,10 @@ library(moments)
 library(dplyr)
 library(reshape2)
 library(gridExtra)
+library(glmnet)
+library(caret)
+library(car)
+library(arm)
 ```
 
 Inicialmente, planteamos repartir las particiones de forma equitativa entre todos los meses del año. Sin embargo, la alta concentración de incendios en verano descompensaba los datos. Para corregir este sesgo y optimizar el proceso, decidimos agrupar los meses en dos bloques estacionales: frío y calor. De esta manera, pudimos generar los conjuntos de entrenamiento, validación y prueba de forma aleatoria y mucho más eficiente.
@@ -90,7 +95,6 @@ Inicialmente, planteamos repartir las particiones de forma equitativa entre todo
 ##### DIVISIÓN CALOR-FRÍO:
 
 ```{r}
-set.seed(2138) #--- semilla
 
 #-- Creamos ambos vectores.
 calor <- c("jun", "jul", "aug", "sep")
@@ -323,7 +327,7 @@ boxplot(temp ~ meses_calor, data=datos.train,
 
 **Distribución:** Observando el histograma, vemos que la temperatura sigue una distribución muy parecida a la "normal" (forma de campana), algo que ayudará al modelo en el aprendizaje. La mayoría de los incendios se concentran entre los 16°C y los 22°C, con picos de entre 33 y 42 eventos por intervalo. Por el contrario, hay muy pocos registros por debajo de los 5°C o por encima de los 30°C. Esto último puede parecer extraño, pero tiene sentido: simplemente hay menos días al año con calor tan extremo y, además, en esas fechas se extrema la prevención. No obstante, aunque sean pocos casos, esos días de calor intenso son los que suelen dejar las mayores superficies quemadas.
 
-**Boxplot:** El diagrama de caja nos muestra que la mediana está en los 19°C; es decir, la mitad de los incendios ocurrieron por encima de esa temperatura y la otra mitad por debajo. La mayor concentración de incendios ocurren en un rango de entre 16°C y 23°C. También aparecen algunos valores atípicos: incendios en días inusualmente fríos (menos de 5°C) y un caso extremo que roza los 34°C.
+**Boxplot:** El diagrama de caja nos muestra que la mediana está en los 19°C, es decir, la mitad de los incendios ocurrieron por encima de esa temperatura y la otra mitad por debajo. La mayor concentración de incendios ocurren en un rango de entre 16°C y 23°C. También aparecen algunos valores atípicos: incendios en días inusualmente fríos (menos de 5°C) y un caso extremo que roza los 34°C.
 
 **Comparativa entre meses de frío y calor:** Este gráfico confirma que dividir los datos por temporadas fue una buena decisión. Se ve una separación muy clara entre las temperaturas típicas de los meses fríos (\~13°C) y los cálidos (\~21°C). Mientras que en invierno los incendios suelen ocurrir entre los 9°C y 16°C, en verano el rango sube a los 18-24°C, dándole al modelo un contexto térmico muy bien definido. Por último, en la etapa de calor destacan algunos valores atípicos: uno por encima de los 33°C (momento crítico para la propagación) y otro sorprendentemente bajo, por debajo de los 10°C.
 
@@ -474,6 +478,8 @@ ggplot(datos.train, aes(x = area_log)) +
 
 La variable 'area' presenta una fuerte asimetría positiva, con muchos valores cercanos a cero y algunos valores extremos elevados. Tras aplicar la transformación logarítmica, la distribución se vuelve más equilibrada, reduciendo el impacto de los valores atípicos y facilitando el análisis.
 
+Por otro lado, se han probado diversas transformaciones como Yeo-Johnson, la inversa, la logarítmica y Box-Cox, obteniéndose resultados similares. Por ello, se opta por la transformación logarítmica, ya que permite una interpretación más sencilla de los coeficientes del modelo.
+
 #### Análisis de la variable categórica 'month':
 
 ```{r}
@@ -594,6 +600,7 @@ El gráfico muestra una alta concentración de observaciones en valores de lluvi
 La línea de tendencia presenta una ligera pendiente negativa, lo que podría sugerir que, a mayor cantidad de lluvia, el área quemada tiende a disminuir. Sin embargo, esta relación es muy débil y poco representativa debido a la escasa variabilidad de la variable rain y al predominio de valores nulos.
 
 ##### rain_bin
+
 ```{r}
 ggplot(datos.train, aes(x = factor(rain_bin), y = area, fill = factor(rain_bin))) +
   geom_boxplot() +
@@ -605,6 +612,7 @@ ggplot(datos.train, aes(x = factor(rain_bin), y = area, fill = factor(rain_bin))
        fill = "Tipo de día") +
   theme_classic()
 ```
+
 El gráfico muestra que la mayoría de los valores del área quemada son cercanos a cero tanto en días con lluvia como sin lluvia.
 
 Sin embargo, los valores más altos del área quemada se observan únicamente en días sin lluvia, mientras que en los días con lluvia apenas hay variabilidad y los valores son muy bajos.
@@ -858,11 +866,11 @@ La sequedad del suelo a corto y largo plazo está conectada pero se comporta de 
 
 Las correlaciones lineales con el tamaño del incendio (area_log) son muy débiles, lo que significa que no depende de una sola variable, sino de la combinación de varios factores. Además, los incendios no crecen siempre de forma proporcional: la intervención de los bomberos y los límites naturales de inflamabilidad hacen que la relación entre el clima y la superficie quemada sea complicada.
 
-# 3. MODELOS DE REGRESIÓN LÍNEAL SIMPLE Y MÚLTIPLE
+# 3. MODELOS DE REGRESIÓN LINEAL SIMPLE Y MÚLTIPLE
 
 ## Modelos lineales simples
 
-Se seleccionan aquellas variables que presentan mayor relación con la variable objetivo, basándose en el análisis exploratorio previo (EDA), con el fin dee evaluar su efecto individual sobre el área quemada. Posteriormente, se ajusta un modelo de regresión lineal simple para cada variable seleccionada.
+Se seleccionan aquellas variables que presentan mayor relación con la variable objetivo, basándose en el análisis exploratorio previo (EDA), con el fin de evaluar su efecto individual sobre el área quemada. Posteriormente, se ajusta un modelo de regresión lineal simple para cada variable seleccionada.
 
 ### Entre 'RH' y 'area_log'
 
@@ -881,7 +889,7 @@ El diagrama de dispersión no muestra una relación lineal clara entre la humeda
 #### Ajustamos un modelo de regresión lineal simple
 
 ```{r}
-modelo <- lm(area_log ~ RH, data = datos.train)
+modelo_rh <- lm(area_log ~ RH, data = datos.train)
 
 summary(modelo)
 
@@ -1108,11 +1116,7 @@ En términos simples, esto significa que no se puede asegurar que el ISI influya
 #### Diagnosis del modelo
 
 ```{r}
-# Asegúrate de haber definido el modelo antes
 modelo <- lm(area_log ~ ISI, data = datos.train)
-
-library(ggplot2)
-library(gridExtra)
 
 # Extraer información del modelo
 residuos <- residuals(modelo)
@@ -1207,14 +1211,14 @@ Mediante el gráfico de Residuos vs. Leverage, se identificó un punto con un ni
 #### Estudio del outlier:
 
 ```{r}
-# 1. Identificar las filas con alto leverage
+# Identificar las filas con alto leverage
 n <- nrow(datos.train)
 k <- 1
 umbral_lev <- 2 * (k + 1) / n
 leverage_vals <- hatvalues(modelo)
 filas_alto_leverage <- which(leverage_vals > umbral_lev)
 
-# 2. Extraer los valores de esas filas
+# Extraer los valores de esas filas
 # Mostramos: Fila, valor de ISI, valor de log_area y su valor de leverage
 tabla_leverage <- data.frame(
   Fila = filas_alto_leverage,
@@ -1223,16 +1227,15 @@ tabla_leverage <- data.frame(
   Leverage = leverage_vals[filas_alto_leverage]
 )
 
-# 3. Ordenar por Leverage para ver el más "bestia" primero
+# Ordenar por Leverage para ver el más "bestia" primero
 tabla_leverage <- tabla_leverage[order(-tabla_leverage$Leverage), ]
 
-# 4. Ver los resultados
+# Ver los resultados
 print(tabla_leverage)
 ```
 
 ```{r}
-# 1. Crear el nuevo modelo SIN el punto influyente (fila 169)
-# Quitamos los dos grandes sospechosos
+# Crear el nuevo modelo SIN el punto influyente (fila 169)
 datos_limpios <- datos.train[-169,]
 modelo_limpio <- lm(area_log ~ ISI, data = datos_limpios)
 
@@ -1324,7 +1327,7 @@ El diagrama muestra una correlación positiva donde el incremento de la temperat
 #### Ajustamos un modelo de regresión lineal simple
 
 ```{r}
-set.seed(456)
+
 modelo_temp <- lm(area_log ~ temp, data = datos.train)
 
 summary(modelo_temp)
@@ -1472,7 +1475,7 @@ round(comparativa_simples, 4)
 
 Tras comparar los modelos de Humedad Relativa (RH), ISI y temperatura, el modelo de RH se confirma como la mejor opción individual. Los datos muestran que presenta el error más bajo (RMSE de 1.3799) y la mayor capacidad explicativa (R² ajustado de 0.0061), superando al modelo de temperatura, cuyo R² ajustado negativo lo invalida como predictor lineal fiable. Esta superioridad numérica, sumada a un mejor cumplimiento de los supuestos de linealidad y homocedasticidad en los gráficos de residuos, justifica la elección de la humedad relativa como la variable individual más relevante para el análisis.
 
-## Modelos líneales múltiples
+## Modelos lineales múltiples
 
 Se consideran variables meteorológicas e índices de combustible para modelar el área quemada.
 
@@ -1480,17 +1483,18 @@ Se consideran variables meteorológicas e índices de combustible para modelar e
 
 ```{r}
 # Modelo múltiple con todas las variables (área original)
-modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + meses_calor + meses_frio + day_bin, 
+modelo_multiple_orig <- lm(area ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + meses_calor + day_bin, 
                            data = datos.train)
 
 # Comparación de modelos
-cat("=== COMPARACIÓN DE MODELOS (ÁREA ORIGINAL) ===\n")
+cat(" COMPARACIÓN DE MODELOS (ÁREA ORIGINAL) \n")
 cat("Modelo Múltiple - R²:", round(summary(modelo_multiple_orig)$r.squared, 4), "\n")
 cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.r.squared, 4), "\n")
 
 # Ver el resumen completo
 summary(modelo_multiple_orig)
 ```
+
 El modelo de regresión lineal múltiple con la variable original presenta una capacidad explicativa muy limitada (R² ajustado = -0.0256), lo que indica que las variables incluidas no aportan información relevante para explicar el área quemada.
 
 Además, el modelo en conjunto no resulta significativo (p-valor global = 0.93), lo que confirma la falta de relación entre las variables explicativas y la variable respuesta.
@@ -1507,7 +1511,7 @@ Se introduce este nuevo modelo debido a que la variable $area$ presenta fuerte a
 
 ```{r}
 modelo_log <- lm(
-  area_log ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + meses_frio + meses_calor + day_bin,
+  area_log ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + meses_calor + day_bin,
   data = datos.train
 )
 
@@ -1534,6 +1538,7 @@ mae <- mean(abs(datos.train$area_log - pred))
 rmse
 mae
 ```
+
 El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa (R² ajustado = 0.03534), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
 
 El test F no es significativo al 5% (p = 0.05119), aunque está muy cercano al nivel de significación, lo que indica que el modelo en conjunto no resulta claramente significativo.
@@ -1586,18 +1591,14 @@ Para garantizar la estabilidad de los coeficientes del modelo multivariante, se 
 ### 4º Modelo: Lasso
 
 ```{r}
-library(glmnet)
-
 # Preparar las matrices
 X <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)[, -1]
 Y <- datos.train$area_log
 
 # EJECUTAR RIDGE (alpha = 0)
-set.seed(123)
 cv_ridge <- cv.glmnet(X, Y, alpha = 0,standardize=TRUE) 
 
 # EJECUTAR LASSO (alpha = 1)
-set.seed(123)
 cv_lasso <- cv.glmnet(X, Y, alpha = 1,standardize=TRUE)
 
 # EJECUTAR OLS (Regresión normal para comparar)
@@ -1617,6 +1618,8 @@ print(output)
 ```
 
 Los resultados de Lasso funcionan como un mecanismo de selección automática de variables: al aplicar la penalización óptima, el modelo ha reducido exactamente a cero los coeficientes de temp, DC y DMC. Esto indica que estas variables no aportan información predictiva relevante para el área quemada y pueden ser descartadas. En consecuencia, Lasso simplifica la estructura del modelo dejando únicamente a la humedad relativa (RH) y al índice ISI como predictores activos, lo que genera un modelo más robusto y menos propenso al ruido.
+
+Nota: La elección de aplicar el modelo Lasso específicamente sobre este subconjunto de variables (RH, ISI, temp, DC y DMC) responde a una estrategia de optimización y parsimonia, fundamentada en los hallazgos del análisis exploratorio (EDA). Al seleccionar estos predictores, se priorizan las variables con mayor variabilidad y relevancia física para la propagación del fuego, evitando introducir "ruido" con variables de varianza casi nula (como rain) o coordenadas espaciales que podrían distorsionar la interpretación climática. Además, esta selección actúa como una barrera contra la multicolinealidad, ya que permite que el algoritmo Lasso gestione de forma eficiente la redundancia de información entre los índices de sequía y las condiciones hidrotérmicas, forzando a cero aquellos coeficientes que no aportan un valor predictivo marginal significativo y logrando así un modelo más robusto, interpretable y con mayor capacidad de generalización.
 
 ### **Comparación:**
 
@@ -1667,242 +1670,91 @@ Tras evaluar las cuatro propuestas, el Modelo Lasso se selecciona como el más e
 
 Al haber reducido a cero los coeficientes de las variables menos relevantes (temperatura e índices de sequía profunda), Lasso ofrece la mejor capacidad de generalización y una interpretación técnica clara para la gestión forestal, centrada exclusivamente en los motores principales: la Humedad Relativa (RH) y el Índice de Propagación (ISI).
 
-### DIAGNÓSTICO DEL MODELO ELEGIDO
+### FALTA DIAGNOSIS LASSO
 
 ```{r}
 
-modelo <- lm(ISI ~ RH, data = datos.train)
-
-summary(modelo)
-
-coeficientes <- coef(modelo)
-cat('Intercept beta0 es ', round(coeficientes[1],2), '\n')
-cat('El valor de la pendiente beta1 es ', round(coeficientes[2],2), '\n')
-# Asegúrate de haber definido el modelo antes
-modelo <- lm(RH ~ ISI, data = datos.train)
-
-library(ggplot2)
-library(gridExtra)
-
-# Extraer información del modelo
-residuos <- residuals(modelo)
-valores_ajustados <- fitted(modelo)
-residuos_std <- rstandard(modelo)
-residuos_stud <- rstudent(modelo)
-leverage_vals <- hatvalues(modelo)
-
-# 1. Residuos vs Ajustados (Linealidad y Varianza)
-p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), 
+# A. Linealidad y varianza (Residuos vs Ajustados)
+p1 <- ggplot(data.frame(x = fitted(modelo_ols), y = residuals(modelo_ols)),
              aes(x = x, y = y)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_point(alpha = 0.6, color = "darkgreen") +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
   geom_smooth(method = "loess", se = FALSE, color = "red") +
   labs(title = "Residuos vs Ajustados",
-       x = "Valores ajustados", y = "Residuos") +
-  theme_classic()
+       x = "Valores ajustados",
+       y = "Residuos") +
+  theme_minimal()
 
-# 2. Q-Q Plot (Normalidad)
-p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
-  geom_qq(alpha = 0.7, color = "steelblue") +
+# B. Normalidad (Q-Q Plot)
+p2 <- ggplot(data.frame(res = rstandard(modelo_ols)), aes(sample = res)) +
+  geom_qq(color = "darkgreen") +
   geom_qq_line(color = "red") +
-  labs(title = "Q-Q Plot") +
-  theme_classic()
+  labs(title = "Q-Q Plot de residuos") +
+  theme_minimal()
 
-# 3. Scale-Location (Homocedasticidad)
-p3 <- ggplot(data.frame(x = valores_ajustados, 
-                        y = sqrt(abs(residuos_std))), 
+# C. Homocedasticidad (Scale-Location)
+p3 <- ggplot(data.frame(x = fitted(modelo_ols),
+                        y = sqrt(abs(rstandard(modelo_ols)))),
              aes(x = x, y = y)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
+  geom_point(alpha = 0.6, color = "darkgreen") +
   geom_smooth(method = "loess", se = FALSE, color = "red") +
   labs(title = "Scale-Location",
        x = "Valores ajustados",
-       y = "sqrt(|Res. Std|)") +
-  theme_classic()
+       y = "sqrt(|Residuos estandarizados|)") +
+  theme_minimal()
 
-# 4. Residuos vs Leverage (Puntos influyentes)
-datos_leverage <- data.frame(leverage = leverage_vals, residuos_stud = residuos_stud)
-p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
-  labs(title = "Residuos vs Leverage",
-       x = "Leverage", y = "Residuos estudentizados") +
-  theme_classic()
-
-# 5. Histograma (Distribución de errores)
-p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
-  geom_histogram(aes(y = after_stat(density)), bins = 15,
-                 fill = "lightblue", color = "black", alpha = 0.7) +
-  stat_function(fun = dnorm,
-                args = list(mean = mean(residuos), sd = sd(residuos)),
-                color = "red", linewidth = 1) +
-  labs(title = "Histograma de residuos") +
-  theme_classic()
-
-# 6. Residuos vs Orden (Independencia)
-p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos),
-             aes(x = orden, y = residuos)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
+# D. Independencia (Residuos vs orden)
+p4 <- ggplot(data.frame(x = 1:length(residuals(modelo_ols)),
+                        y = residuals(modelo_ols)),
+             aes(x = x, y = y)) +
   geom_line(alpha = 0.3) +
+  geom_point(color = "darkgreen") +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(title = "Residuos vs Orden") +
-  theme_classic()
+  labs(title = "Residuos vs orden",
+       x = "Observación",
+       y = "Residuos") +
+  theme_minimal()
 
-# Renderizar cuadrícula
-grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
+# Mostrar gráficos
+grid.arrange(p1, p2, p3, p4, ncol = 2)
+
+
+# CPR plots (linealidad)
+par(mfrow = c(2,3))
+crPlots(modelo_ols, main = "Componente + Residuo")
+
+# AV plots (importancia variables)
+par(mfrow = c(2,3))
+avPlots(modelo_ols,
+        main = "Regresión parcial",
+        col = "darkgreen",
+        col.lines = "red",
+        pch = 16)
+
+# Reset
+par(mfrow = c(1,1))
 ```
 
-### Estudio del Outlier
+Comprobación de normalidad:
 
 ```{r}
-# Crear datos para el gráfico Residuals vs. Leverage
-leverage_vals <- hatvalues(modelo)
-residuos_stud <- rstudent(modelo)  # Residuos estudentizados
-cook_dist <- cooks.distance(modelo)
-
-datos_leverage <- data.frame(
-  leverage = leverage_vals,
-  residuos_stud = residuos_stud,
-  cook = cook_dist,
-  observacion = 1:length(leverage_vals)
-)
-
-# Calcular umbrales
-n <- nrow(datos)
-k <- 1
-leverage_threshold <- 2 * (k + 1) / n
-cook_threshold <- 4 / (n - k - 1)
-
-# Función para crear curvas de Cook
-cook_curve <- function(leverage, cook_value, k) {
-  sqrt(cook_value * (k + 1) * (1 - leverage) / leverage)
-}
-
-# Crear curvas de Cook para diferentes valores
-lev_seq <- seq(0.001, max(leverage_vals) * 1.1, length.out = 100)
-cook_05 <- data.frame(
-  leverage = lev_seq,
-  pos = cook_curve(lev_seq, 0.5, k),
-  neg = -cook_curve(lev_seq, 0.5, k)
-)
-cook_1 <- data.frame(
-  leverage = lev_seq,
-  pos = cook_curve(lev_seq, 1, k),
-  neg = -cook_curve(lev_seq, 1, k)
-)
-
-# Gráfico Residuals vs. Leverage con ggplot2
-ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
-  # Curvas de Cook
-  geom_line(data = cook_05, aes(x = leverage, y = pos), 
-            color = "red", linetype = "dashed", alpha = 0.6, inherit.aes = FALSE) +
-  geom_line(data = cook_05, aes(x = leverage, y = neg), 
-            color = "red", linetype = "dashed", alpha = 0.6, inherit.aes = FALSE) +
-  geom_line(data = cook_1, aes(x = leverage, y = pos), 
-            color = "red", linetype = "solid", alpha = 0.8, inherit.aes = FALSE) +
-  geom_line(data = cook_1, aes(x = leverage, y = neg), 
-            color = "red", linetype = "solid", alpha = 0.8, inherit.aes = FALSE) +
-  # Puntos de datos
-  geom_point(color = "#0072B2", alpha = 0.7, size = 2) +
-  # Líneas de referencia
-  geom_hline(yintercept = 0, color = "gray", linetype = "dashed") +
-  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted", alpha = 0.7) +
-  geom_vline(xintercept = leverage_threshold, color = "purple", linetype = "dotted", alpha = 0.7) +
-  # Etiquetas
-  labs(
-    title = "Residuals vs. Leverage",
-    x = "Leverage",
-    y = "Residuos Estudentizados",
-    caption = "Curvas rojas: Cook 0.5 (discontinua) y 1.0 (continua) | Líneas naranjas: ±2 | Línea morada: umbral leverage"
-  ) +
-  theme_classic(base_size = 12)
-
-# Identificar observaciones problemáticas
-high_leverage <- which(leverage_vals > leverage_threshold)
-outliers_stud <- which(abs(residuos_stud) > 2)
-high_cook <- which(cook_dist > cook_threshold)
+shapiro.test(residuals(modelo_ols))
 ```
 
-```{r}
-influence_measures <- influence.measures(modelo)
-summary(influence_measures)
-```
+Rechazamos la hipótesis nula (p_valor \< 0.05): no cumple el supuesto de normalidad.
 
-```{r}
-# 1. Crear el nuevo modelo SIN el punto influyente (fila 169)
-# Quitamos los dos grandes sospechosos
-datos_limpios <- datos.train[-300,]
-modelo_limpio <- lm(ISI ~ RH, data = datos_limpios)
-
-# Extraer información del nuevo modelo
-residuos <- residuals(modelo_limpio)
-valores_ajustados <- fitted(modelo_limpio)
-residuos_std <- rstandard(modelo_limpio)
-residuos_stud <- rstudent(modelo_limpio)
-leverage_vals <- hatvalues(modelo_limpio)
-
-# 1. Residuos vs Ajustados
-p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), aes(x = x, y = y)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  geom_smooth(method = "loess", se = FALSE, color = "red") +
-  labs(title = "Residuos vs Ajustados (Sin 23)", x = "Valores ajustados", y = "Residuos") +
-  theme_classic()
-
-# 2. Q-Q Plot
-p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
-  geom_qq(alpha = 0.7, color = "steelblue") +
-  geom_qq_line(color = "red") +
-  labs(title = "Q-Q Plot") +
-  theme_classic()
-
-# 3. Scale-Location
-p3 <- ggplot(data.frame(x = valores_ajustados, y = sqrt(abs(residuos_std))), aes(x = x, y = y)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_smooth(method = "loess", se = FALSE, color = "red") +
-  labs(title = "Scale-Location", x = "Valores ajustados", y = "sqrt(|Res. Std|)") +
-  theme_classic()
-
-# 4. Residuos vs Leverage
-datos_leverage <- data.frame(leverage = leverage_vals, residuos_stud = residuos_stud)
-p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
-  labs(title = "Residuos vs Leverage", x = "Leverage", y = "Residuos estudentizados") +
-  theme_classic()
-
-# 5. Histograma
-p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
-  geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "lightblue", color = "black", alpha = 0.7) +
-  stat_function(fun = dnorm, args = list(mean = mean(residuos), sd = sd(residuos)), color = "red", linewidth = 1) +
-  labs(title = "Histograma de residuos") +
-  theme_classic()
-
-# 6. Residuos vs Orden
-p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos), aes(x = orden, y = residuos)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_line(alpha = 0.3) +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(title = "Residuos vs Orden") +
-  theme_classic()
-
-# Renderizar cuadrícula limpia
-grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
-```
-
-Como podemos observar, la regresión lineal no es un buen modelo para estos datos.
+Finalmente, al observar que no se cumple el supuesto de normalidad de los residuos podemos concluir que no es un buen modelo.
 
 # 4. Modelos de regresión generalizada
 
 ```{r}
-# 1. Preparar el Target Binario 
+# Preparar el Target Binario 
 datos.train$fuego <- ifelse(datos.train$area > 0, 1, 0)
 datos.train$fuego <- as.factor(ifelse(datos.train$fuego == 1, "present", "absent"))
 ```
 
 ```{r}
-glm_fuego <- glm(fuego ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + day_bin, 
+glm_fuego <- glm(fuego ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin, 
                  family = binomial("logit"), data = datos.train)
 summary(glm_fuego)
 ```
@@ -1912,18 +1764,17 @@ La aparente significancia exclusiva de la variable X en el modelo saturado no im
 En concreto, tal y como se observa en la matriz de correlación, variables como el índice FWI y la temperatura presentan una elevada correlación, es decir, comparten una gran proporción de información (varianza común). Esta redundancia dificulta que el modelo logístico pueda separar correctamente el efecto individual de cada variable sobre la variable respuesta.
 
 ```{r}
-# 3. Bondad de Ajuste Global (Prueba de Desviación)
-# ¿Es el modelo mejor que uno vacío?
+# Bondad de Ajuste Global (Prueba de Desviación)
 deviance_diff <- glm_fuego$null.deviance - glm_fuego$deviance
 df_diff <- glm_fuego$df.null - glm_fuego$df.residual
 p_val_global <- 1 - pchisq(deviance_diff, df = df_diff)
 cat("P-valor del test global:", p_val_global, "\n")
 ```
 
-El modelo presenta una Null deviance de 354.17 y una Residual deviance de 334.71. Aunque se observa una reducción en la desviación, el test de la razón de verosimilitud sugiere que el modelo saturado no es lo suficientemente parsimonioso. El AIC de 358.71 servirá como base de comparación para los métodos de selección de variables; el objetivo será encontrar un modelo simplificado que reduzca este valor, eliminando el ruido causado por las variables no significativas
+El modelo presenta una Null deviance de 354.17 y una Residual deviance de 334.71. Aunque se observa una reducción en la desviación, el test de la razón de verosimilitud sugiere que el modelo saturado no es lo suficientemente parsimonioso. El AIC de 338.36 servirá como base de comparación para los métodos de selección de variables; el objetivo será encontrar un modelo simplificado que reduzca este valor, eliminando el ruido causado por las variables no significativas
 
 ```{r}
-# 4. Selección Automática de Variables 
+# Selección Automática de Variables 
 glm_fuego_opt <- step(glm_fuego, direction = "both")
 ```
 
@@ -1935,26 +1786,23 @@ summary(modelo_final_log)
 ```
 
 ```{r}
-# 5. Evaluación con Matriz de Confusión (En datos de TEST para mayor rigor)
+# Evaluación con Matriz de Confusión (En datos de TEST para mayor rigor)
 # Primero preparamos los datos de test igual que los de train
-datos.test$fuego <- as.factor(ifelse(datos.test$area > 0, "present", "absent"))
+datos.train$fuego <- as.factor(ifelse(datos.train$area > 0, "present", "absent"))
 
 # Predicciones
-preds_prob <- predict(glm_fuego_opt, newdata = datos.test, type = 'response')
+preds_prob <- predict(glm_fuego_opt, newdata = datos.train, type = 'response')
 preds_clase <- factor(ifelse(preds_prob > 0.5, 'present', 'absent'), levels = c("absent", "present"))
 
 # Matriz de Confusión
-library(caret)
-confusionMatrix(preds_clase, datos.test$fuego, positive = 'present', mode = 'everything')
+confusionMatrix(preds_clase, datos.train$fuego, positive = 'present', mode = 'everything')
 ```
 
-La evaluación del modelo logístico final sobre el conjunto de test muestra un Accuracy del 49.6%, un valor que se sitúa por debajo del No Information Rate (55.04%), sugiriendo que el modelo no supera la capacidad predictiva del azar en esta muestra.
-
-Si bien el modelo muestra una Sensibilidad aceptable (66.2%) para identificar incendios presentes, su Especificidad es muy baja (29.3%), lo que se traduce en un elevado número de falsos positivos (41 casos de 'absent' predichos como 'present'). El valor de Kappa negativo (-0.04) confirma que el modelo no ha logrado capturar un patrón robusto que permita diferenciar la ocurrencia o ausencia de fuego basándose únicamente en las variables X, FFMC e ISI.
+La evaluación del modelo logístico muestra una capacidad predictiva limitada, con una exactitud del 56.6%, la cual no supera de forma significativa al azar ($p=0.42$). El modelo presenta un sesgo hacia la clase positiva, mostrando una alta sensibilidad (77.8%) pero una especificidad muy deficiente (29.8%). Esto indica que, aunque el modelo es capaz de captar la mayoría de los incendios, genera un número excesivo de falsas alarmas.
 
 ```{r}
-# 6. Interpretación: Odds Ratios
-# Esto es vital para tu informe. Dice cuánto aumenta el riesgo de incendio por cada variable.
+# Interpretación: Odds Ratios
+# Dice cuánto aumenta el riesgo de incendio por cada variable.
 odds_ratios <- exp(coef(glm_fuego_opt))
 print("Odds Ratios (Riesgo relativo):")
 print(odds_ratios)
@@ -1963,9 +1811,7 @@ print(odds_ratios)
 El análisis de los Odds Ratios permite cuantificar el impacto real de los predictores. Se observa que la ubicación (X) y la sequedad de los combustibles finos (FFMC) son factores de riesgo positivos, incrementando las posibilidades de incendio en un 15.5% y 5.2% respectivamente por cada unidad de incremento.
 
 ```{r}
-# 7. Diagnóstico de Residuos (Binned Plots)
-# Para logística no se usan los residuos normales, se usan "binned residuals"
-library(arm)
+# Diagnóstico de Residuos (Binned Plots)
 binnedplot(fitted(glm_fuego_opt), 
            residuals(glm_fuego_opt, type = 'response'), 
            main = "Binned residual plot (Modelo Logístico)")
@@ -1974,12 +1820,10 @@ binnedplot(fitted(glm_fuego_opt),
 Este gráfico nos asegura que el modelo está bien construido y que los errores que comete son por la dificultad de los datos y no porque el modelo esté mal hecho
 
 ```{r}
-library(car)
 residualPlots(glm_fuego_opt)
 ```
 
 El modelo comete errores grandes en algunos casos. Esto significa que predice mal: puede decir que hay poco riesgo cuando en realidad sí lo hay, o la revés. Por ello, sería conveniente estudiar esos casos.
-
 
 ## 5. Comparación y evalución de modelos
 
@@ -2002,13 +1846,65 @@ rmse2
 rmse3
 ```
 
+Selección mejor modelo:
+
+Elegimos entre RH-AREA_LOG, LASSO Y LOGÍSTICO (utilizamos datos.test)
+
+```{r}
+
+# A. Modelo Simple (Humedad vs Área Log)
+pred_rh <- predict(modelo, newdata = datos.test)
+
+# B. Modelo Lasso (Multivariante Óptimo)
+# Necesitamos la matriz de diseño de test para Lasso
+X_test_lasso <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.test)[, -1]
+pred_lasso <- as.numeric(predict(cv_lasso, newx = X_test_lasso, s = "lambda.min"))
+
+# C. Modelo Logístico (Clasificación de Presencia/Ausencia)
+# Usamos el modelo optimizado por stepwise
+prob_log <- predict(glm_fuego_opt, newdata = datos.test, type = "response")
+clase_log <- factor(ifelse(prob_log > 0.5, "present", "absent"), levels = c("absent", "present"))
+
+
+# CÁLCULO DE MÉTRICAS DE REGRESIÓN (RMSE y MAE)
+# Función auxiliar para errores
+get_rmse_mae <- function(real, pred) {
+  rmse <- sqrt(mean((real - pred)^2))
+  mae  <- mean(abs(real - pred))
+  return(c(RMSE = rmse, MAE = mae))
+}
+
+res_rh    <- get_rmse_mae(datos.test$area_log, pred_rh)
+res_lasso <- get_rmse_mae(datos.test$area_log, pred_lasso)
+
+
+# CÁLCULO DE EXACTITUD (ACCURACY)
+# Para comparar modelos de regresión con el logístico, convertimos sus 
+# predicciones numéricas a clases (si predice > 0, es "present")
+real_fuego <- factor(datos.test$fuego, levels = c("absent", "present"))
+
+acc_rh    <- mean(factor(ifelse(pred_rh > 0, "present", "absent"), levels = c("absent", "present")) == real_fuego)
+acc_lasso <- mean(factor(ifelse(pred_lasso > 0, "present", "absent"), levels = c("absent", "present")) == real_fuego)
+acc_log   <- mean(clase_log == real_fuego)
+
+
+# TABLA COMPARATIVA FINAL
+comparativa_final <- data.frame(
+  Modelo = c("Regresión Simple (RH)", "Lasso (Óptimo)", "Regresión Logística"),
+  RMSE_Test = c(res_rh["RMSE"], res_lasso["RMSE"], NA),
+  MAE_Test  = c(res_rh["MAE"], res_lasso["MAE"], NA),
+  Accuracy  = c(acc_rh, acc_lasso, acc_log)
+)
+
+print(" RESULTADOS COMPARATIVOS EN EL CONJUNTO DE TEST ")
+print(round(comparativa_final[, 2:4], 4))
+```
 
 ### Evaluación final (test) con el modelo elegido
 
 ```{r}
-# =========================================================================
-# 1. PREPROCESAMIENTO COMPLETO DE DATOS.TEST (RÉPLICA DE TRAIN)
-# =========================================================================
+
+# PREPROCESAMIENTO COMPLETO DE DATOS.TEST (RÉPLICA DE TRAIN)
 
 # A. Sincronización de Factores (Mes y Día)
 datos.test$month <- factor(datos.test$month, 
@@ -2032,10 +1928,8 @@ datos.test$area_log <- log1p(datos.test$area)
 # E. Variable para Regresión Logística (Fuego Presente/Ausente)
 datos.test$fuego <- as.factor(ifelse(datos.test$area > 0, "present", "absent"))
 
-# =========================================================================
-# 2. EVALUACIÓN DEL MEJOR MODELO (LASSO) EN TEST
-# =========================================================================
 
+# EVALUACIÓN DEL MEJOR MODELO (LASSO) EN TEST
 # Crear la matriz de diseño para Test (debe coincidir con la de Train)
 X_test_mat <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.test)[, -1]
 Y_test_real <- datos.test$area_log
@@ -2046,9 +1940,8 @@ pred_test_lasso <- predict(cv_lasso, newx = X_test_mat, s = "lambda.min")
 # Guardar predicciones en el dataset para visualización
 datos.test$prediccion_lasso <- as.numeric(pred_test_lasso)
 
-# =========================================================================
-# 3. TABLA COMPARATIVA FINAL DE MÉTRICAS (TRAIN VS TEST)
-# =========================================================================
+
+# TABLA COMPARATIVA FINAL DE MÉTRICAS (TRAIN VS TEST)
 
 # Función para calcular RMSE y MAE
 metricas <- function(real, pred) {
@@ -2066,13 +1959,13 @@ comparativa_final <- rbind(
   "Prueba (Test)"         = res_test
 )
 
-print("=== EVALUACIÓN FINAL DEL MODELO LASSO ===")
+print("EVALUACIÓN FINAL DEL MODELO LASSO")
 round(comparativa_final, 4)
 ```
 
 La evaluación final del modelo Lasso revela una excelente capacidad de generalización y robustez técnica, fundamentada en la estrecha coherencia entre las métricas de ambos conjuntos de datos. El error cuadrático medio obtenido en el conjunto de entrenamiento ($RMSE = 1.3733$) presenta una desviación mínima respecto al observado en el conjunto de prueba ($RMSE = 1.4434$), lo que representa una diferencia de apenas el 5%. Esta estabilidad, sumada a la consistencia de los errores absolutos medios ($MAE_{train} = 1.1479$ frente a $MAE_{test} = 1.1935$), confirma que la regularización Lasso ha mitigado con éxito el riesgo de sobreajuste (overfitting). El modelo no se ha limitado a memorizar el ruido de la muestra original, sino que ha logrado extraer patrones meteorológicos subyacentes que mantienen su validez ante datos no observados previamente. Aunque la magnitud del error refleja la complejidad intrínseca y la naturaleza estocástica del área quemada en el parque, la parsimonia lograda al seleccionar únicamente los predictores más influyentes garantiza un modelo equilibrado y metodológicamente fiable para la estimación del riesgo forestal.
 
-CONCLUSIONES:
+## CONCLUSIONES:
 
 LA OPCIÓN DE BINARIZAR ES BUENA, LOS DATOS PRESENTAN DISTINTA CASUÍSTICA Y ES MEJOR EMPEZAR CON UNA ALTERNATIVA BINARIA DE CLASIFICACIÓN, HABRÍA QUE SEGUIR ESTUDIANDO BBLA BLA
 
@@ -2084,4 +1977,4 @@ Aunque los tres miembros del grupo hemos colaborado en la elaboración y revisi�
 
 -   Cristina: EDA, modelo lineal simple y múltiple, comparación de modelos, modelos lineales generalizados y conclusiones. Revisión final.
 
--   Ruth: Comparación de modelos, modelos lineales simple y múltiple, EDA,  modelos lineales generalizados y conclusiones. Revisión final.
+-   Ruth: Comparación de modelos, modelos lineales simple y múltiple, EDA, modelos lineales generalizados y conclusiones. Revisión final.
