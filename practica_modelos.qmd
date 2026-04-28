@@ -1274,7 +1274,9 @@ El modelo con transformación logarítmica presenta menores errores (RMSE = 1.36
 
 En conjunto, el modelo mejora con la transformación logarítmica, aunque su capacidad explicativa sigue siendo limitada.
 
-### 3º Modelo: VIF
+### 3º y 4º Modelo: Ridge y Lasso
+
+Análisis de multicolinealidad entre las variables predictoras mediante VIF:
 
 ```{r}
 # Cargar la librería necesaria
@@ -1311,9 +1313,7 @@ vif_summary <- data.frame(
 print(vif_summary)
 ```
 
-Para garantizar la estabilidad de los coeficientes del modelo multivariante, se ha calculad el VIF. Todos los valores VIF se encuentran significativamente por debajo del umbral crítico de 5 (y muy lejos del límite de 10). Esto indica que no existe multicolinealidad entre los predictores.
-
-### 4º Modelo: Lasso
+Los resultados obtenidos permiten comprobar que no se detectan problemas relevantes de colinealidad, por lo que las variables seleccionadas pueden incluirse de forma conjunta en el modelo. Todos los valores VIF se encuentran significativamente por debajo del umbral crítico de 5 (y muy lejos del límite de 10), lo que indica que no se detecta multicolinealidad significativa entre los predictores.
 
 ```{r}
 # Preparar las matrices
@@ -1342,11 +1342,15 @@ print(output)
 
 ```
 
-Los resultados de Lasso actúan como un mecanismo de selección automática de variables: al aplicar la penalización óptima, el modelo ha reducido a cero los coeficientes de temp (0.000) y DC (0.000). Esto indica que estas variables no aportan información predictiva relevante para el área quemada y pueden ser descartadas.
+Los resultados de Lasso muestran un proceso de selección automática de variables: al aplicar la penalización óptima (λ seleccionado mediante validación cruzada), los coeficientes de temp y DC se reducen a cero, por lo que estas variables pueden eliminarse del modelo.
 
-En consecuencia, Lasso simplifica la estructura del modelo manteniendo como predictores activos la humedad relativa (RH = -0.007), el índice ISI = -0.003 y DMC = 0.002, lo que da lugar a un modelo más simple.
+De este modo, Lasso mantiene como predictores activos RH (-0.007), ISI (-0.003) y DMC (0.002), obteniendo un modelo más parsimonioso. RH e ISI presentan relación negativa con el área quemada, mientras que DMC presenta una relación positiva, aunque de baja magnitud.
 
-Nota: La elección de aplicar el modelo Lasso sobre este subconjunto de variables (RH, ISI, temp, DC y DMC) responde a un criterio de simplicidad basado en el análisis exploratorio. Estas variables recogen información relevante sobre las condiciones meteorológicas, mientras que otras variables fueron descartadas para evitar introducir ruido. Además, Lasso permite gestionar la redundancia entre variables, eliminando automáticamente aquellas cuyo aporte es nulo y dando lugar a un modelo más sencillo e interpretable.
+Por su parte, Ridge reduce la magnitud de los coeficientes sin eliminarlos, manteniendo todas las variables en el modelo pero con menor impacto. Esto mejora la estabilidad del modelo frente a posibles correlaciones entre predictores.
+
+La elección de aplicar Lasso y Ridge sobre este subconjunto de variables se basa en criterios de simplicidad y en el análisis exploratorio previo, evitando introducir ruido y facilitando la interpretación.
+
+En conjunto, Ridge mejora la estabilidad del modelo, mientras que Lasso permite obtener un modelo más simple sin una pérdida apreciable de capacidad explicativa.
 
 ### **Comparación:**
 
