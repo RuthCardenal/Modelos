@@ -4,9 +4,10 @@ author: "María Cristina Quintana Sevajanes, Ruth Cardenal Millán, Kimberly Per
 format: 
   html:
     toc: true
-    toc-location: left  
-    code-fold: true      
-    theme: cosmo
+    toc-location: left
+    code-fold: true
+    theme: default
+    embed-resources: true
 editor: visual
 ---
 
@@ -109,8 +110,6 @@ datos$meses_frio  <- ifelse(datos$month %in% frio, 1, 0)
 ```{r}
 n <- nrow(datos) #-- n = número de filas 
 indices_disponibles <- 1:n # índices disponibles = número de filas.
-
-# Buscamos que los datos no se repitan
 
 # Extraemos el 50% para Train
 
@@ -1705,7 +1704,7 @@ Inclusión de Datos de Gestión y Extinción: El dataset actual es puramente met
 
 Modelado de la Inflamabilidad por Zonas: Profundizar en el análisis geoespacial mediante modelos de series temporales espaciales, ya que se ha identificado un hotspot recurrente en las coordenadas (4,4) y (4,5) que sugiere factores de relieve, tipo de biomasa o actividad humana no capturados por los índices meteorológicos actuales.
 
-# Reparto del trabajo
+# 7. REPARTO DE TRABAJO.
 
 Aunque los tres miembros del grupo hemos colaborado en la elaboración y revisión de toda la práctica, cada una ha llevado un poco más la voz cantante en distintas secciones. En particular, a continuación se detallalas secciones ordenadas por grado de participación:
 
