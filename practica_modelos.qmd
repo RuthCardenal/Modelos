@@ -61,7 +61,6 @@ Observamos que esta muestra posee 517 filas y 13 columnas.
 
 ```{r}
 datos <- read.csv("forestfires.csv")
-print(datos)
 dim(datos)    
 head(datos)
 set.seed(123)
@@ -88,6 +87,7 @@ library(glmnet)
 library(caret)
 library(car)
 library(arm)
+library(lmtest)
 ```
 
 Inicialmente, planteamos repartir las particiones de forma equitativa entre todos los meses del año. Sin embargo, la alta concentración de incendios en verano descompensaba los datos. Para corregir este sesgo y optimizar el proceso, decidimos agrupar los meses en dos bloques estacionales: frío y calor. De esta manera, pudimos generar los conjuntos de entrenamiento, validación y prueba de forma aleatoria y mucho más eficiente.
@@ -132,11 +132,11 @@ indices_valid <- setdiff(indices_restantes, indices_test)
 datos.train <- datos[indices_train, ]
 datos.test  <- datos[indices_test, ]
 datos.valid <- datos[indices_valid, ]
-View(datos.train)
+
 dim(datos.test) #129 filas
-View(datos.test)
+
 dim(datos.train) #258 filas
-View(datos.valid)
+
 dim(datos.valid) #130 filas
 ```
 
@@ -486,15 +486,15 @@ ggplot(datos.train, aes(x = day, fill = day)) +
   theme_minimal()
 ```
 
-**Distribucion**: La gráfica muestra que la cantidad de incendios cambia según el día de la semana. Se observa que los valores más altos aparecen el jueves, viernes, sábado y sobre todo, el domingo, lo que indica que durante el fin de semana hay más incedios. Esto probablemente se debe a que hay más personas realizando actividades al aire libre, lo que aumenta el riesgo de que se inicien fuegos de forma accidental.
+**Distribucion**: La gráfica muestra que la cantidad de incendios cambia según el día de la semana. Se observa que los valores más altos aparecen el viernes, sábado y sobre todo, el domingo, lo que indica que durante el fin de semana hay más incedios. Esto probablemente se debe a que hay más personas realizando actividades al aire libre, lo que aumenta el riesgo de que se inicien fuegos de forma accidental.
 
 **Transformación variable** $day$**:**
 
 ```{r}
-datos.train$day_bin <- ifelse(datos.train$day %in% c("thu", "fri", "sat", "sun"), 1, 0)
+datos.train$day_bin <- ifelse(datos.train$day %in% c("fri", "sat", "sun"), 1, 0)
 ```
 
-Se ha creado una variable binaria que agrupa los días en dos categorías: entre semana (lunes a miércoles) y fin de semana ampliado (jueves a domingo), con el objetivo de captar posibles cambios en el comportamiento de los incendios en los días cercanos al fin de semana.
+Se ha creado una variable binaria que agrupa los días en dos categorías: entre semana (lunes a jueves) y fin de semana (viernes a domingo), con el objetivo de captar posibles cambios en el comportamiento de los incendios en los días cercanos al fin de semana.
 
 **Visualización:**
 
@@ -509,7 +509,7 @@ ggplot(datos.train, aes(x = factor(day_bin), fill = factor(day_bin))) +
 
 ```
 
-Podemos observar que hay más incendios los fines de semana (jueves, viernes, sábado y domingo) que entre semana (lunes, martes y miércoles), como hemos dicho anteriormente.
+Podemos observar que hay más incendios los fines de semana (viernes, sábado y domingo) que entre semana (lunes, martes, miércoles y jueves), como hemos dicho anteriormente.
 
 ## ANÁLISIS BIVARIANTE
 
@@ -524,7 +524,7 @@ ggplot(datos.train, aes(x = month, y = area, fill = month)) +
   theme_classic()
 ```
 
-**Distribución**: La gráfica de promedios revela que la peligrosidad de un incendio no depende solo de la cantidad de fuegos que haya (frecuencia), sino de la capacidad de propagación. Mayo, septiembre y diciembre son los meses donde, estadísticamente, un incendio tiene más probabilidades de convertirse en un evento de gran magnitud.
+**Distribución**: La gráfica de promedios revela que la peligrosidad de un incendio no depende solo de la cantidad de fuegos que haya (frecuencia), sino de la capacidad de propagación. Agosto y diciembre son los meses donde, estadísticamente, un incendio tiene más probabilidades de convertirse en un evento de gran magnitud.
 
 #### Relación entre la temperatura y el área quemada (escala logarítmica).
 
@@ -560,7 +560,7 @@ Sin embargo, la dispersión de los datos es elevada y no se observa un patrón c
 
 #### Relación entre la lluvia y el área quemada (escala logarítmica).
 
-##### rain
+##### **rain**
 
 ```{r}
 ggplot(datos.train, aes(x = rain, y = area_log)) +
@@ -576,7 +576,7 @@ El gráfico muestra una alta concentración de observaciones en valores de lluvi
 
 La línea de tendencia presenta una ligera pendiente negativa, lo que podría sugerir que, a mayor cantidad de lluvia, el área quemada tiende a disminuir. Sin embargo, esta relación es muy débil y poco representativa debido a la escasa variabilidad de la variable rain y al predominio de valores nulos.
 
-##### rain_bin
+##### **rain_bin**
 
 ```{r}
 ggplot(datos.train, aes(x = factor(rain_bin), y = area, fill = factor(rain_bin))) +
@@ -782,13 +782,13 @@ cor(vars_num)
 
 **Interpretación**:
 
-Podemos observar diversas correlaciones entre las variables. Por ejemplo, existe una relación positiva moderada entre ISI y FFMC (0.481), lo cual tiene sentido, ya que el índice ISI incorpora el efecto del viento y del FFMC en su cálculo, reflejando la capacidad de propagación del fuego.
+Podemos observar diversas correlaciones entre las variables. Por ejemplo, existe una relación positiva moderada entre ISI y FFMC (0.539), lo cual tiene sentido, ya que el índice ISI incorpora el efecto del viento y del FFMC en su cálculo, reflejando la capacidad de propagación del fuego.
 
-Asimismo, se observa una correlación positiva relativamente alta entre DC y DMC (0.668), debido a que ambas variables están relacionadas con la sequedad del combustible, aunque en distintas escalas temporales (DMC refleja condiciones recientes, mientras que DC recoge efectos acumulados de sequía a largo plazo).
+Asimismo, se observa una correlación positiva relativamente alta entre DC y DMC (0.681), debido a que ambas variables están relacionadas con la sequedad del combustible, aunque en distintas escalas temporales (DMC refleja condiciones recientes, mientras que DC recoge efectos acumulados de sequía a largo plazo).
 
-También se aprecia una correlación positiva moderada entre la temperatura y el DMC (0.447), lo que indica que temperaturas más elevadas favorecen la sequedad del combustible debido a una mayor evaporación. Por este mismo motivo, se observa una relación positiva similar entre la temperatura y el DC (0.467), que refleja condiciones de sequía más prolongadas.
+También se aprecia una correlación positiva moderada entre la temperatura y el DMC (0.484), lo que indica que temperaturas más elevadas favorecen la sequedad del combustible debido a una mayor evaporación. Por este mismo motivo, se observa una relación positiva similar entre la temperatura y el DC (0.48), que refleja condiciones de sequía más prolongadas.
 
-Por último, destaca una correlación negativa moderada entre la temperatura y la humedad relativa (-0.512), lo cual es coherente, ya que a mayor temperatura suele disminuir la humedad en el ambiente.
+Por último, destaca una correlación negativa moderada entre la temperatura y la humedad relativa (-0.533), lo cual es coherente, ya que a mayor temperatura suele disminuir la humedad en el ambiente.
 
 #### Heatmap de correlación
 
@@ -898,15 +898,15 @@ ic <- confint(mod_rh)
 ic
 ```
 
-El intervalo de confianza del 95% para el coeficiente asociado a la humedad relativa incluye el valor 0, lo que indica que no existe evidencia suficiente para considerar que esta variable sea estadísticamente significativa.
-
 ```{r}
 summary(mod_rh)$r.squared
 ```
 
-La variable RH explica aproximadamente el 0.99% de la variabilidad de la variable respuesta, lo cual es muy bajo.
+El intervalo de confianza del 95% para el coeficiente asociado a la humedad relativa incluye el valor 0, lo que indica que no existe evidencia suficiente para considerar que esta variable sea estadísticamente significativa.
 
-Además, dado que el p-valor de RH es 0.145 \> 0.05, no existe evidencia suficiente para considerarla significativa en el modelo.
+La variable RH explica aproximadamente el 1.46% de la variabilidad de la variable respuesta, lo cual es muy bajo.
+
+Además, dado que el p-valor de RH es 0.053, ligeramente superior a 0.05, no existe evidencia suficiente para considerarla significativa en el modelo. Sin embargo, al 10% de significancia, la variable sí sería significativa, aunque su efecto es poco relevante.
 
 #### Diagnosis del modelo
 
@@ -997,19 +997,9 @@ p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos),
 grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
 ```
 
-El análisis de los gráficos de diagnóstico muestra que el modelo de regresión lineal simple no cumple completamente los supuestos clásicos del modelo lineal.
+En el gráfico de residuos frente a los valores ajustados se observa una ligera curvatura, lo que indica que la relación no es completamente lineal. El gráfico Q-Q y el histograma muestran que los residuos no siguen una distribución normal, especialmente en los extremos. Además, el gráfico Scale-Location presenta cierta variabilidad en la dispersión de los residuos, lo que apunta a posible heterocedasticidad. Por otro lado, no se observan puntos altamente influyentes en el gráfico de leverage, y el gráfico de residuos frente al orden no presenta patrones claros, indicando independencia de los errores.
 
-El gráfico de residuos frente a los valores ajustados presenta cierta curvatura, lo que indica que la linealidad no se cumple completamente. No obstante, este supuesto será evaluado posteriormente mediante el test de Ramsey RESET.
-
-El gráfico Q-Q indica que los residuos siguen aproximadamente una distribución normal en el centro, aunque presentan desviaciones en los extremos, por lo que no se cumple completamente el supuesto de normalidad.
-
-El gráfico Scale-Location muestra heterocedasticidad, ya que el patrón de puntos presenta forma de embudo, por lo que no se cumple el supuesto de homocedasticidad.
-
-En el gráfico de residuos frente al leverage no se observan puntos especialmente influyentes.
-
-El histograma de residuos presenta cierta simetría, en línea con el gráfico Q-Q, aunque con desviaciones respecto a la normalidad.
-
-Por último, el gráfico de residuos frente al orden no muestra patrones claros, lo que sugiere independencia de los errores.
+Sin embargo, realizamos la comprobación a través de los diversos test:
 
 ```{r}
 suppressPackageStartupMessages(library(lmtest))
@@ -1027,13 +1017,25 @@ bp_resultado <- bptest(mod_rh)
 print(bp_resultado)
 ```
 
-El test RESET da un p-valor mayor que 0.05, por lo que el supuesto de linealidad puede considerarse cumplido. Por otro lado, el test de Breusch-Pagan da un p-valor de 0.062, mayor que 0.05, por lo que no hay evidencia de heterocedasticidad. Sin embargo, está muy al límite y, a un nivel de confianza del 99%, no habría homocedasticidad.
+```{r}
+shapiro.test(residuals(mod_rh))
+```
 
-Aunque se cumpla la linealidad, los gráficos de residuos muestran claramente que el modelo no cumple el supuesto de normalidad ni el de homocedasticidad.
+```{r}
+dwtest(mod_rh)
+```
 
-En conclusión, aunque el modelo puede considerarse aproximadamente lineal, al no cumplir los supuestos mencionados anteriormente, puede descartarse. Además, la variable explicativa no resulta significativa y la capacidad explicativa es muy baja.
+El test de Ramsey RESET presenta un p-valor de 0.3568, superior a 0.05, por lo que no se rechaza la hipótesis nula y se puede considerar que la relación entre las variables es aproximadamente lineal.
 
-Por otro lado, dado que se ha comprobado que hay supuestos que no se cumplen, no es necesario realizar el test de independencia ni el de normalidad.
+El test de Breusch-Pagan muestra un p-valor de 0.1257, también mayor que 0.05, lo que indica que no hay evidencia suficiente de heterocedasticidad y, por tanto, se puede asumir homocedasticidad en el modelo.
+
+Sin embargo, el test de Shapiro-Wilk arroja un p-valor muy pequeño (p \< 0.05), lo que indica que los residuos no siguen una distribución normal, incumpliéndose el supuesto de normalidad.
+
+Por último, el test de Durbin-Watson presenta un valor cercano a 2 (DW = 2.06) y un p-valor de 0.691, por lo que no hay evidencia de autocorrelación y se puede asumir independencia de los errores.
+
+En resumen, el modelo cumple los supuestos de linealidad, homocedasticidad e independencia, pero no cumple el supuesto de normalidad de los residuos.
+
+En conclusión, aunque el modelo cumple algunos de los supuestos del modelo lineal clásico, no los satisface completamente, en particular el de normalidad de los residuos. Además, la variable explicativa no resulta estadísticamente significativa y la capacidad explicativa del modelo es muy baja, por lo que el modelo no resulta adecuado para explicar ni predecir la variable respuesta.
 
 ### Entre 'ISI' y 'area_log'
 
@@ -1060,9 +1062,9 @@ cat('Intercepto beta0 es ', round(coeficientes[1],2), '\n')
 cat('Pendiente beta1 (ISI) es ', round(coeficientes[2],2), '\n')
 ```
 
-Los resultados del modelo de regresión lineal simple indican que el Índice de Propagación Inicial (ISI) no presenta una relación significativa con el área quemada. En concreto, el p-valor asociado al ISI (0.122) es superior al nivel de significancia habitual (α = 0.05), lo que implica que no existe evidencia estadística suficiente para afirmar que esta variable influya de manera lineal en la magnitud del incendio.
+Los resultados del modelo de regresión lineal simple indican que el Índice de Propagación Inicial (ISI) no presenta una relación significativa con el área quemada. En concreto, el p-valor asociado al ISI (0.844) es superior al nivel de significancia habitual (α = 0.05), lo que implica que no existe evidencia estadística suficiente para afirmar que esta variable influya de manera lineal en la magnitud del incendio.
 
-Asimismo, el coeficiente de determinación (R² ≈ 0.009) muestra que el modelo apenas explica un 1% de la variabilidad observada, lo que confirma su escasa capacidad predictiva. Aunque el coeficiente estimado para el ISI es negativo, este resultado no es fiable desde el punto de vista estadístico y puede atribuirse al ruido presente en los datos.
+Asimismo, el coeficiente de determinación (R² ≈ -0.003755) muestra que el modelo apenas explica un 1% de la variabilidad observada, lo que confirma su escasa capacidad predictiva. Aunque el coeficiente estimado para el ISI es negativo, este resultado no es fiable desde el punto de vista estadístico y puede atribuirse al ruido presente en los datos.
 
 En conjunto, estos resultados indican que, si bien el ISI es un indicador técnico del potencial de propagación del fuego, no constituye un buen predictor del tamaño final del incendio en este conjunto de datos.
 
@@ -1086,7 +1088,7 @@ ic_isi<-confint(mod_isi)
 ic_isi
 ```
 
-Para confirmar la falta de relación entre el ISI y el área quemada, se analizaron los intervalos de confianza al 95% de los coeficientes del modelo. En el caso del ISI, el intervalo obtenido es \[−0.0596,0.0071\]. Dado que este intervalo incluye el valor cero, se concluye que no hay evidencia suficiente para afirmar que el ISI tenga un efecto real sobre el área quemada.
+Para confirmar la falta de relación entre el ISI y el área quemada, se analizaron los intervalos de confianza al 95% de los coeficientes del modelo. En el caso del ISI, el intervalo obtenido es \[−0.03832,0.03136\]. Dado que este intervalo incluye el valor cero, se concluye que no hay evidencia suficiente para afirmar que el ISI tenga un efecto real sobre el área quemada.
 
 En términos simples, esto significa que no se puede asegurar que el ISI influya en el tamaño del incendio, ya que su impacto podría ser incluso nulo. Por tanto, esta variable no aporta información relevante al modelo, y cualquier pequeña variación observada en su coeficiente se debe al azar o al ruido de los datos, y no a una relación real entre las variables.
 
@@ -1164,13 +1166,13 @@ grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
 
 Interpretación:
 
-1.  Supuesto de Linealidad y Homocedasticidad
+Supuesto de Linealidad y Homocedasticidad
 
 El gráfico de Residuos vs. Valores Ajustados revela una distribución no aleatoria de los errores. Se observa una concentración de datos en valores ajustados altos y una ausencia de observaciones en el rango inicial, lo que sugiere que el modelo no captura adecuadamente la estructura de los datos.
 
 Asimismo, el gráfico Scale-Location muestra una tendencia ascendente en la línea de suavizado roja, lo que confirma la presencia de heterocedasticidad. Esto implica que la varianza del error no es constante y aumenta proporcionalmente al valor de la predicción, invalidando la eficiencia de los estimadores por mínimos cuadrados ordinarios (MCO).
 
-2.  Normalidad de los Residuos
+Normalidad de los Residuos
 
 El análisis de normalidad a través del Q-Q Plot y el Histograma de Residuos indica desviaciones significativas.
 
@@ -1180,111 +1182,9 @@ El histograma muestra una asimetría positiva (sesgo a la derecha) pronunciada.
 
 Estos resultados indican que las inferencias estadísticas (intervalos de confianza y pruebas de hipótesis $t$ o $F$) podrían no ser precisas debido al incumplimiento del supuesto de normalidad.
 
-3.  Puntos Influyentes y Outliers
+Puntos Influyentes y Outliers:
 
-Mediante el gráfico de Residuos vs. Leverage, se identificó un punto con un nivel de apalancamiento superior a $0.3$, lo cual es considerablemente alto en comparación con el resto de la muestra. Este dato actúa como un punto influyente que podría estar sesgando los coeficientes del modelo. Adicionalmente, el gráfico de Residuos vs. Orden detecta varios valores atípicos (outliers) que superan las 4 unidades de residuo, afectando la estabilidad del ajuste.
-
-#### Estudio del outlier:
-
-```{r}
-# Identificar las filas con alto leverage
-n <- nrow(datos.train)
-k <- 1
-umbral_lev <- 2 * (k + 1) / n
-leverage_vals <- hatvalues(mod_isi)
-filas_alto_leverage <- which(leverage_vals > umbral_lev)
-
-# Extraer los valores de esas filas
-# Mostramos: Fila, valor de ISI, valor de log_area y su valor de leverage
-tabla_leverage <- data.frame(
-  Fila = filas_alto_leverage,
-  ISI = datos.train$ISI[filas_alto_leverage],
-  log_area = datos.train$area_log[filas_alto_leverage],
-  Leverage = leverage_vals[filas_alto_leverage]
-)
-
-# Ordenar por Leverage para ver el más "bestia" primero
-tabla_leverage <- tabla_leverage[order(-tabla_leverage$Leverage), ]
-
-# Ver los resultados
-print(tabla_leverage)
-```
-
-```{r}
-# Crear el nuevo modelo SIN el punto influyente (fila 169)
-datos_limpios <- datos.train[-169,]
-modelo_limpio <- lm(area_log ~ ISI, data = datos_limpios)
-
-# Extraer información del nuevo modelo
-residuos <- residuals(modelo_limpio)
-valores_ajustados <- fitted(modelo_limpio)
-residuos_std <- rstandard(modelo_limpio)
-residuos_stud <- rstudent(modelo_limpio)
-leverage_vals <- hatvalues(modelo_limpio)
-
-# 1. Residuos vs Ajustados
-p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), aes(x = x, y = y)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  geom_smooth(method = "loess", se = FALSE, color = "red") +
-  labs(title = "Residuos vs Ajustados (Sin 23)", x = "Valores ajustados", y = "Residuos") +
-  theme_classic()
-
-# 2. Q-Q Plot
-p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
-  geom_qq(alpha = 0.7, color = "steelblue") +
-  geom_qq_line(color = "red") +
-  labs(title = "Q-Q Plot") +
-  theme_classic()
-
-# 3. Scale-Location
-p3 <- ggplot(data.frame(x = valores_ajustados, y = sqrt(abs(residuos_std))), aes(x = x, y = y)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_smooth(method = "loess", se = FALSE, color = "red") +
-  labs(title = "Scale-Location", x = "Valores ajustados", y = "sqrt(|Res. Std|)") +
-  theme_classic()
-
-# 4. Residuos vs Leverage
-datos_leverage <- data.frame(leverage = leverage_vals, residuos_stud = residuos_stud)
-p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
-  labs(title = "Residuos vs Leverage", x = "Leverage", y = "Residuos estudentizados") +
-  theme_classic()
-
-# 5. Histograma
-p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
-  geom_histogram(aes(y = after_stat(density)), bins = 15, fill = "lightblue", color = "black", alpha = 0.7) +
-  stat_function(fun = dnorm, args = list(mean = mean(residuos), sd = sd(residuos)), color = "red", linewidth = 1) +
-  labs(title = "Histograma de residuos") +
-  theme_classic()
-
-# 6. Residuos vs Orden
-p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos), aes(x = orden, y = residuos)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_line(alpha = 0.3) +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(title = "Residuos vs Orden") +
-  theme_classic()
-
-# Renderizar cuadrícula limpia
-grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
-```
-
-Interpretación: El gráfico de residuos frente a los valores ajustados muestra que, en general, la línea se mantiene cerca de cero. Aunque en los extremos se nota una ligera curvatura y hay más puntos concentrados en los valores altos, el modelo parece captar bastante bien la relación lineal principal.
-
-Respecto a la homocedasticidad, el gráfico Scale-Location indica que la dispersión de los residuos aumenta un poco cuando crecen los valores predichos. Sin embargo, como este aumento no es muy marcado ni forma un patrón claro en forma de embudo, se puede considerar que la varianza es más o menos constante.
-
-Por lo tanto, se pueden interpretar los resultados del modelo, aunque conviene hacerlo con algo de precaución, especialmente en lo relacionado con la precisión de los errores estándar.
-
-```{r}
-suppressPackageStartupMessages(library(lmtest))
-
-reset_resultado <- resettest(modelo_limpio, power = 2:3, type = "fitted")
-
-print(reset_resultado)
-```
+Podemos observar la presencia de un punto outlier influyente que está distorsionando nuestro diagnóstico del modelo. Su eleminación, se añadirá en el apartado 7, trabajos a futuro.
 
 ### Entre 'temp' y 'area_log'
 
@@ -1303,7 +1203,6 @@ El diagrama muestra una correlación positiva donde el incremento de la temperat
 #### Ajustamos un modelo de regresión lineal simple
 
 ```{r}
-
 mod_temp <- lm(area_log ~ temp, data = datos.train)
 
 summary(mod_temp)
@@ -1313,7 +1212,9 @@ cat('Intercept beta0 es ', round(coeficientes[1],2), '\n')
 cat('El valor de la pendiente beta1 es ', round(coeficientes[2],2), '\n')
 ```
 
-Los resultados del modelo de regresión lineal para la temperatura muestran que esta variable, analizada de forma individual, carece de capacidad predictiva sobre el área quemada. Con un p-valor de 0.467, la temperatura no resulta estadísticamente significativa, y el R² ajustado de -0.0018 confirma que el modelo no aporta información útil para explicar la variabilidad observada. En la práctica, un valor negativo en el R² ajustado indica que la variable introducida explica menos varianza de la que se esperaría por puro azar, reforzando que un modelo lineal simple no es suficiente para capturar la magnitud de los incendios basándose únicamente en esta métrica.
+Los resultados del modelo de regresión lineal para la temperatura muestran que esta variable, analizada de forma individual, carece de capacidad predictiva sobre el área quemada. Con un p-valor de 0.1682, la temperatura no resulta estadísticamente significativa.
+
+Asimismo, el coeficiente de determinación ($R^2$ ajustado) de 0.0035 es extremadamente bajo, indicando que el modelo apenas explica un 0.35% de la variabilidad del área quemada (en escala logarítmica). En la práctica, este valor tan cercano a cero refuerza que un modelo lineal simple es insuficiente para capturar la complejidad de los incendios basándose únicamente en la temperatura, la cual actúa más como un factor habilitador que como un predictor directo de la superficie final afectada.
 
 #### Visualización del modelo ajustado
 
@@ -1330,7 +1231,7 @@ ggplot(datos.train, aes(x = temp, y = area_log)) +
 
 ```
 
-La visualización confirma gráficamente la falta de significancia del modelo lineal. La línea de regresión (en rojo) aparece prácticamente horizontal, lo que refuerza que no existe una tendencia clara de incremento del área quemada respecto a la temperatura. Asimismo, la banda de confianza (en rosa) es notablemente ancha en comparación con la pendiente, indicando una alta incertidumbre en la estimación. La enorme dispersión de los puntos alrededor de la recta y el valor negativo del R² ajustado demuestran que la temperatura, por sí sola, es un predictor ineficaz para la magnitud de los incendios en este ajuste lineal.
+La visualización confirma gráficamente la falta de significancia del modelo lineal. La línea de regresión (en rojo) aparece prácticamente horizontal, lo que refuerza que no existe una tendencia clara de incremento del área quemada respecto a la temperatura. Asimismo, la banda de confianza (en rosa) es notablemente ancha en comparación con la pendiente, indicando una alta incertidumbre en la estimación. La enorme dispersión de los puntos alrededor de la recta y el bajo del R² ajustado demuestran que la temperatura, por sí sola, es un predictor ineficaz para la magnitud de los incendios en este ajuste lineal.
 
 Vamos a obtener también los intervalos de confianza de los parámetros $\beta$:
 
@@ -1339,13 +1240,13 @@ ic_temp <- confint(mod_temp)
 ic_temp
 ```
 
-El intervalo de confianza al 95% para el coeficiente de la temperatura comprende valores entre -0.0189 y 0.0412. Al incluir el valor cero dentro de este rango, se confirma estadísticamente que no existe evidencia suficiente para afirmar que la temperatura tenga un efecto real (distinto de cero) sobre el área quemada. Esto refuerza el p-valor obtenido anteriormente y valida que la relación observada es compatible con el azar.
+El intervalo de confianza al 95% para el coeficiente de la temperatura comprende valores entre -0.00897 y 0.05122. Al incluir el valor cero dentro de este rango, se confirma estadísticamente que no existe evidencia suficiente para afirmar que la temperatura tenga un efecto real (distinto de cero) sobre el área quemada. Esto refuerza el p-valor obtenido anteriormente y valida que la relación observada es compatible con el azar.
 
 ```{r}
 summary(mod_temp)$r.squared
 ```
 
-El coeficiente de determinación es de 0.00206, lo que indica que la temperatura solo es capaz de explicar un 0.2% de la variabilidad del área quemada (en escala logarítmica). Este valor es extremadamente bajo, lo que demuestra que, aunque la temperatura sea un factor físico relevante en la propagación de incendios, por sí sola carece de fuerza predictiva en este modelo lineal simple.
+El coeficiente de determinación es de 0.00740, lo que indica que la temperatura solo es capaz de explicar un 0.7% de la variabilidad del área quemada (en escala logarítmica). Este valor es extremadamente bajo, lo que demuestra que, aunque la temperatura sea un factor físico relevante en la propagación de incendios, por sí sola carece de fuerza predictiva en este modelo lineal simple.
 
 #### Diagnosis del modelo
 
@@ -1420,7 +1321,7 @@ reset_resultado <- resettest(mod_temp, power = 2:3, type = "fitted")
 print(reset_resultado)
 ```
 
-El test RESET de Ramsey arroja un p-valor de **0.07298**, el cual es ligeramente superior al nivel de significancia estándar ($\alpha = 0.05$). Al no ser estadísticamente significativo, no se puede rechazar la hipótesis nula, lo que sugiere que la forma funcional lineal del modelo es aceptable y no existe una mala especificación grave. Sin embargo, al estar el valor tan cerca del límite de rechazo, se confirma que el ajuste es débil y que la relación lineal entre temperatura y área quemada es insuficiente para realizar estimaciones de confianza.
+El test RESET de Ramsey arroja un p-valor de 0.000118, el cual es ignificativamente inferior al nivel de significancia estándar (\$\\alpha = 0.05\$). Al ser estadísticamente significativo, se rechaza la hipótesis nula de linealidad, lo que indica que la forma funcional del modelo es inadecuada y existe una mala especificación grave.Este resultado sugiere que la relación entre las variables meteorológicas y el área quemada no es puramente lineal, y que el modelo podría beneficiarse de la inclusión de términos no lineales (como potencias o interacciones) o de una reevaluación de las transformaciones aplicadas. Los gráficos de diagnóstico confirman esta conclusión, mostrando una curvatura persistente en los residuos que invalida el uso de un modelo lineal simple para realizar estimaciones de confianza en este escenario.
 
 Elección modelo simple:
 
@@ -1444,7 +1345,7 @@ comparativa_simples <- rbind(
 round(comparativa_simples, 4)
 ```
 
-Tras comparar los modelos de Humedad Relativa (RH), ISI y temperatura, el modelo de RH se confirma como la mejor opción individual. Los datos muestran que presenta el error más bajo (RMSE de 1.3799) y la mayor capacidad explicativa (R² ajustado de 0.0061), superando al modelo de temperatura, cuyo R² ajustado negativo lo invalida como predictor lineal fiable. Esta superioridad numérica, sumada a un mejor cumplimiento de los supuestos de linealidad y homocedasticidad en los gráficos de residuos, justifica la elección de la humedad relativa como la variable individual más relevante para el análisis.
+Tras comparar los modelos de Humedad Relativa (RH), ISI y temperatura, el modelo de RH se confirma como la mejor opción individual. Los datos muestran que presenta el error más bajo (RMSE de 1.4055) y la mayor capacidad explicativa (R² ajustado de 0.0107), superando al modelo de temperatura, cuyo R² ajustado negativo lo invalida como predictor lineal fiable. Esta superioridad numérica, sumada a un mejor cumplimiento de los supuestos de linealidad y homocedasticidad en los gráficos de residuos, justifica la elección de la humedad relativa como la variable individual más relevante para el análisis.
 
 ## Modelos lineales múltiples
 
@@ -1466,13 +1367,7 @@ cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.
 summary(modelo_multiple_orig)
 ```
 
-El modelo de regresión lineal múltiple con la variable original presenta una capacidad explicativa muy limitada (R² ajustado = -0.0256), lo que indica que las variables incluidas no aportan información relevante para explicar el área quemada.
-
-Además, el modelo en conjunto no resulta significativo (p-valor global = 0.93), lo que confirma la falta de relación entre las variables explicativas y la variable respuesta.
-
-Ninguna de las variables resulta estadísticamente significativa, por lo que el modelo no es adecuado para explicar el área en su forma original.
-
-Por último, el error estándar de los residuos es elevado (72.79), lo que indica una alta variabilidad en los errores y un bajo ajuste del modelo.
+El modelo de regresión lineal múltiple aplicado sobre el área original presenta un ajuste deficiente, con un $R^2$ ajustado de apenas 0.01275 y una falta de significancia global ($p = 0.329$). Estos resultados indican que la variabilidad del área quemada no puede ser explicada de manera lineal por el conjunto de predictores meteorológicos seleccionados. Únicamente el índice DMC mostró una relación estadísticamente significativa con la variable respuesta ($p < 0.05$). La incapacidad del modelo para capturar la complejidad del fenómeno confirma que la relación entre las condiciones ambientales y la magnitud de los incendios es altamente no lineal.
 
 ### 2º Modelo: Todas las variables originales con la variable objetivo transformada.
 
@@ -1510,13 +1405,13 @@ rmse
 mae
 ```
 
-El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa (R² ajustado = 0.03534), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
+El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa (R² ajustado = 0.02588), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
 
-El test F no es significativo al 5% (p = 0.05119), aunque está muy cercano al nivel de significación, lo que indica que el modelo en conjunto no resulta claramente significativo.
+El test F no es significativo al 5% (p = 0.1012), por lo que el modelo en conjunto no resulta significativo.
 
-Solo la variable X resulta significativa, mientras que la mayoría no presentan efecto estadísticamente significativo. Esto indica la posible presencia de variables irrelevantes y la necesidad de simplificar el modelo.
+Solo la variable DMC resulta significativa, mientras que la mayoría no presentan efecto estadísticamente significativo. Esto indica la posible presencia de variables irrelevantes y la necesidad de simplificar el modelo.
 
-El modelo con transformación logarítmica presenta menores errores (RMSE = 1.287, MAE = 1.047) que el modelo sin transformar, aunque no son directamente comparables por estar en distintas escalas.
+El modelo con transformación logarítmica presenta menores errores (RMSE = 1.36436, MAE = 1.117) que el modelo sin transformar, aunque no son directamente comparables por estar en distintas escalas.
 
 En conjunto, el modelo mejora con la transformación logarítmica, aunque su capacidad explicativa sigue siendo limitada.
 
@@ -1557,7 +1452,7 @@ vif_summary <- data.frame(
 print(vif_summary)
 ```
 
-Para garantizar la estabilidad de los coeficientes del modelo multivariante, se ha calculado el **Factor de** Todos los valores VIF se encuentran significativamente por debajo del umbral crítico de **5** (y muy lejos del límite de 10). Esto indica que no existe multicolinealidad entre los predictores.
+Para garantizar la estabilidad de los coeficientes del modelo multivariante, se ha calculad el VIF. Todos los valores VIF se encuentran significativamente por debajo del umbral crítico de **5** (y muy lejos del límite de 10). Esto indica que no existe multicolinealidad entre los predictores.
 
 ### 4º Modelo: Lasso
 
@@ -1588,7 +1483,7 @@ print(output)
 
 ```
 
-Los resultados de Lasso funcionan como un mecanismo de selección automática de variables: al aplicar la penalización óptima, el modelo ha reducido exactamente a cero los coeficientes de temp, DC y DMC. Esto indica que estas variables no aportan información predictiva relevante para el área quemada y pueden ser descartadas. En consecuencia, Lasso simplifica la estructura del modelo dejando únicamente a la humedad relativa (RH) y al índice ISI como predictores activos, lo que genera un modelo más robusto y menos propenso al ruido.
+Los resultados de Lasso funcionan como un mecanismo de selección automática de variables: al aplicar la penalización óptima, el modelo ha reducido prácticamente a cero los coeficientes de DC y DMC. Esto indica que estas variables no aportan información predictiva relevante para el área quemada y pueden ser descartadas. En consecuencia, Lasso simplifica la estructura del modelo dejando únicamente a la humedad relativa (RH), al índice ISI y a temp como predictores activos, lo que genera un modelo más robusto y menos propenso al ruido.
 
 Nota: La elección de aplicar el modelo Lasso específicamente sobre este subconjunto de variables (RH, ISI, temp, DC y DMC) responde a una estrategia de optimización y parsimonia, fundamentada en los hallazgos del análisis exploratorio (EDA). Al seleccionar estos predictores, se priorizan las variables con mayor variabilidad y relevancia física para la propagación del fuego, evitando introducir "ruido" con variables de varianza casi nula (como rain) o coordenadas espaciales que podrían distorsionar la interpretación climática. Además, esta selección actúa como una barrera contra la multicolinealidad, ya que permite que el algoritmo Lasso gestione de forma eficiente la redundancia de información entre los índices de sequía y las condiciones hidrotérmicas, forzando a cero aquellos coeficientes que no aportan un valor predictivo marginal significativo y logrando así un modelo más robusto, interpretable y con mayor capacidad de generalización.
 
@@ -1637,9 +1532,7 @@ tabla_final <- rbind(
 round(tabla_final, 4)
 ```
 
-Tras evaluar las cuatro propuestas, el Modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el Modelo Completo presenta el error más bajo ($RMSE = 1.2844$), su excesiva complejidad (12+ variables) eleva el riesgo de sobreajuste. Por el contrario, Lasso logra optimizar el rendimiento frente al modelo reducido de 5 variables, alcanzando un $R^2$ Ajustado superior (0.0193) y un error competitivo ($RMSE = 1.3733$) utilizando una estructura mínima.
-
-Al haber reducido a cero los coeficientes de las variables menos relevantes (temperatura e índices de sequía profunda), Lasso ofrece la mejor capacidad de generalización y una interpretación técnica clara para la gestión forestal, centrada exclusivamente en los motores principales: la Humedad Relativa (RH) y el Índice de Propagación (ISI).
+Tras evaluar las cuatro propuestas, el Modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el Modelo Completo presenta el error más bajo (\$RMSE = 1.3676\$), su excesiva complejidad eleva el riesgo de sobreajuste. Por el contrario, Lasso logra optimizar el rendimiento frente al modelo reducido de 5 variables, alcanzando un \$R\^2\$ Ajustado superior (0.0375) y un error competitivo (\$RMSE = 1.3890\$) utilizando una estructura mínima. Al haber reducido a cero los coeficientes de las variables menos relevantes, Lasso ofrece la mejor capacidad de generalización y una interpretación técnica clara para la gestión forestal, centrada exclusivamente en los motores principales: la Humedad Relativa (RH), el Índice de Propagación (ISI) y la temperatura (temp).
 
 ### Diagnosis del modelo elegido
 
@@ -1705,15 +1598,11 @@ avPlots(modelo_ols,
 par(mfrow = c(1,1))
 ```
 
-Las gráficas de componente + residuo y de regresión parcial permiten evaluar la relación entre cada variable explicativa y la variable respuesta, considerando el efecto del resto de variables del modelo.
+Las gráficas de componente + residuo y de regresión parcial permiten analizar la relación entre cada variable explicativa y la respuesta teniendo en cuenta el resto de variables. En general, se observa que las relaciones son aproximadamente lineales, por lo que el modelo lineal parece adecuado. La variable temp muestra una relación positiva más clara, mientras que DMC también presenta cierta tendencia positiva. Por el contrario, RH e ISI tienen una relación débil y DC apenas aporta información.
 
-En las gráficas de componente + residuo se observa que, en general, las relaciones entre las variables explicativas y la respuesta son aproximadamente lineales, lo que sugiere que el modelo lineal es una aproximación adecuada. La variable temp (temperatura) presenta una relación positiva relativamente clara, mientras que DMC también muestra una tendencia positiva, aunque más moderada. Por otro lado, RH e ISI presentan relaciones negativas débiles, y DC muestra una relación prácticamente plana, lo que indica una baja contribución al modelo. No se aprecian patrones fuertes de no linealidad, aunque en algunos casos hay ligeras curvaturas.
+Las gráficas de regresión parcial confirman estos resultados: temp y, en menor medida, DMC son las variables más relevantes, mientras que el resto presentan poca influencia. También se detectan algunos posibles valores atípicos, como 238, 277, o 416 que se alejan del patrón general.
 
-Las gráficas de regresión parcial confirman estos resultados. La variable temp destaca como una de las más influyentes, con una pendiente positiva más definida. DMC también aporta cierta capacidad explicativa. En contraste, DC presenta una pendiente casi nula, lo que sugiere que su efecto es poco relevante una vez consideradas las demás variables. Las variables RH e ISI muestran efectos débiles y alta dispersión, indicando una menor influencia en la respuesta.
-
-Asimismo, se identifican algunos posibles valores atípicos que podrían estar influyendo en el ajuste del modelo. En conjunto, los resultados indican que el modelo lineal es razonable, aunque podría mejorarse evaluando la eliminación de variables poco significativas o considerando posibles ajustes adicionales.
-
-Visualmente, en el gráfico Q-Q se puede observar el supuesto de normalidad de los residuos. Por ello, no seguimos el análisis, no obstante, hacemos una comprobación:
+Por último, en el gráfico Q-Q se aprecian desviaciones respecto a la recta, especialmente en los extremos, lo que indica que la normalidad de los residuos no se cumple completamente. Para comprobarlo realizamos el test de Shapiro Wilk:
 
 ```{r}
 shapiro.test(residuals(modelo_ols))
@@ -1721,9 +1610,9 @@ shapiro.test(residuals(modelo_ols))
 
 Rechazamos la hipótesis nula (p_valor \< 0.05): no cumple el supuesto de normalidad.
 
-Finalmente, al observar que no se cumple el supuesto de normalidad de los residuos podemos concluir que no es un buen modelo.
+Finalmente, al no cumplirse el supuesto de normalidad de los residuos, el modelo no resulta adecuado. En consecuencia, no hace falta seguir analizando el resto de supuestos.
 
-# 4. Modelos de regresión generalizada
+# 4. MODELOS DE REGRESIÓN GENERALIZADA
 
 ```{r}
 # Preparar el Target Binario 
@@ -1732,14 +1621,16 @@ datos.train$fuego <- as.factor(ifelse(datos.train$fuego == 1, "present", "absent
 ```
 
 ```{r}
-glm_fuego <- glm(fuego ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin, 
+glm_fuego <- glm(fuego ~ X + Y + FFMC + DMC + DC + ISI + temp + RH + wind + rain_bin + day_bin, 
                  family = binomial("logit"), data = datos.train)
 summary(glm_fuego)
 ```
 
-La aparente significancia exclusiva de la variable X en el modelo saturado no implica que el resto de variables, en particular los factores meteorológicos, sean irrelevantes. Por el contrario, este resultado es consistente con la presencia de multicolinealidad entre las variables explicativas.
+La aparente falta de significancia estadística de los predictores en el modelo saturado no implica que estas carezcan de relevancia explicativa. Por el contrario, este resultado es consistente con la presencia de multicolinealidad entre las variables explicativas.
 
 En concreto, tal y como se observa en la matriz de correlación, variables como el índice FWI y la temperatura presentan una elevada correlación, es decir, comparten una gran proporción de información (varianza común). Esta redundancia dificulta que el modelo logístico pueda separar correctamente el efecto individual de cada variable sobre la variable respuesta.
+
+Como consecuencia, la mayoría de las variables resulta estadísticamente significativa de forma individual, ya que sus efectos se encuentran solapados debido a la alta correlación existente entre ellas.
 
 ```{r}
 # Bondad de Ajuste Global (Prueba de Desviación)
@@ -1749,19 +1640,14 @@ p_val_global <- 1 - pchisq(deviance_diff, df = df_diff)
 cat("P-valor del test global:", p_val_global, "\n")
 ```
 
-El modelo presenta una Null deviance de 354.17 y una Residual deviance de 334.71. Aunque se observa una reducción en la desviación, el test de la razón de verosimilitud sugiere que el modelo saturado no es lo suficientemente parsimonioso. El AIC de 338.36 servirá como base de comparación para los métodos de selección de variables; el objetivo será encontrar un modelo simplificado que reduzca este valor, eliminando el ruido causado por las variables no significativas
+El modelo presenta una Null deviance de 356.67 y una Residual deviance de 338.47. Aunque se observa una reducción en la desviación, el test de la razón de verosimilitud sugiere que el modelo saturado no es lo suficientemente parsimonioso. El AIC de 360.23 servirá como base de comparación para los métodos de selección de variables; el objetivo será encontrar un modelo simplificado que reduzca este valor, eliminando el ruido causado por las variables no significativas
 
 ```{r}
 # Selección Automática de Variables 
 glm_fuego_opt <- step(glm_fuego, direction = "both")
 ```
 
-Tras un proceso iterativo de eliminación stepwise, el modelo óptimo resultante ($AIC = 351.65$) redujo la complejidad eliminando 7 predictores redundantes. Las variables finales seleccionadas son X, FFMC e ISI.
-
-```{r}
-modelo_final_log <- glm(fuego ~ X + FFMC + ISI, family = binomial("logit"), data = datos.train)
-summary(modelo_final_log)
-```
+Tras un proceso iterativo de eliminación stepwise, el modelo óptimo resultante ($AIC = 353.93$) redujo la complejidad eliminando 7 predictores redundantes. Las variables finales seleccionadas son X, FFMC e ISI.
 
 ```{r}
 # Evaluación con Matriz de Confusión (En datos de TEST para mayor rigor)
@@ -1776,7 +1662,9 @@ preds_clase <- factor(ifelse(preds_prob > 0.5, 'present', 'absent'), levels = c(
 confusionMatrix(preds_clase, datos.train$fuego, positive = 'present', mode = 'everything')
 ```
 
-La evaluación del modelo logístico muestra una capacidad predictiva limitada, con una exactitud del 56.6%, la cual no supera de forma significativa al azar ($p=0.42$). El modelo presenta un sesgo hacia la clase positiva, mostrando una alta sensibilidad (77.8%) pero una especificidad muy deficiente (29.8%). Esto indica que, aunque el modelo es capaz de captar la mayoría de los incendios, genera un número excesivo de falsas alarmas.
+Los resultados de la matriz de confusión validan la robustez del modelo logístico final. Se observa una precisión (Accuracy) del 60.85%, con una mejora estadística altamente significativa respecto al No Information Rate (p = 0.007).
+
+El modelo destaca especialmente en su sensibilidad (71.53%), demostrando una alta capacidad para identificar correctamente la presencia de incendios. Aunque la especificidad se sitúa en el 48.76%, el valor de Kappa (0.205) confirma que el modelo posee un poder predictivo real y consistente, superando las limitaciones de aleatoriedad presentes en las fases iniciales del estudio.
 
 ```{r}
 # Interpretación: Odds Ratios
@@ -1786,7 +1674,7 @@ print("Odds Ratios (Riesgo relativo):")
 print(odds_ratios)
 ```
 
-El análisis de los Odds Ratios permite cuantificar el impacto real de los predictores. Se observa que la ubicación (X) y la sequedad de los combustibles finos (FFMC) son factores de riesgo positivos, incrementando las posibilidades de incendio en un 15.5% y 5.2% respectivamente por cada unidad de incremento.
+El análisis de los Odds Ratios cuantifica la influencia de cada predictor en la probabilidad de ignición. La coordenada geográfica X destaca como el factor de riesgo con mayor impacto unitario (aumento del 11%), seguida por el índice DMC. En contrapartida, la humedad relativa (RH) y, de manera determinante, la lluvia, actúan como factores inhibidores. Estos resultados permiten establecer prioridades en la vigilancia forestal basadas en umbrales de sequedad y ubicación específica
 
 ```{r}
 # Diagnóstico de Residuos (Binned Plots)
@@ -1795,17 +1683,17 @@ binnedplot(fitted(glm_fuego_opt),
            main = "Binned residual plot (Modelo Logístico)")
 ```
 
-Este gráfico nos asegura que el modelo está bien construido y que los errores que comete son por la dificultad de los datos y no porque el modelo esté mal hecho
+Como podemos observar, la gran mayoría de los residuos agrupados se sitúan dentro de los intervalos de confianza teóricos. Esto confirma que la relación entre las variables meteorológicas y la probabilidad de incendio está correctamente capturada por el modelo logístico, eliminando los problemas de sesgo y varianza inestable que presentaba el enfoque lineal.
 
 ```{r}
 residualPlots(glm_fuego_opt)
 ```
 
-El modelo comete errores grandes en algunos casos. Esto significa que predice mal: puede decir que hay poco riesgo cuando en realidad sí lo hay, o la revés. Por ello, sería conveniente estudiar esos casos.
+Hay un outlier que está causando que la gráfica del linear predictor y del rain_bin no sea lineal. Habrá que hacer un estudio de esos puntos.
 
-## 5. Comparación y evalución de modelos
+# 5. COMPARACIÓN Y EVALUACIÓN DE MODELOS
 
-### Comparar modelos elegidos con validación:
+## Comparar modelos elegidos con validación:
 
 ```{r}
 
@@ -1857,9 +1745,13 @@ tabla_final <- data.frame(
 print(round(tabla_final[, 2:3], 4))
 ```
 
-La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.4884 y un MAE de 1.2142, resultados que confirman una sólida capacidad de generalización y la ausencia de sobreajuste. La estrecha relación entre ambas métricas indica que el modelo es robusto ante la variabilidad de los datos, logrando que el error promedio en las predicciones del área quemada (en escala logarítmica) se mantenga estable. Estos valores validan la efectividad de haber priorizado variables críticas como la humedad relativa y el ISI, consolidando a Lasso como la herramienta más fiable y equilibrada para la estimación del riesgo forestal frente a los modelos de regresión simple o logísticos tradicionales.
+La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.2846 y un MAE de 0.4923, resultados que confirman una sólida capacidad de generalización y la ausencia de sobreajuste. La estrecha relación entre ambas métricas indica que el modelo es robusto ante la variabilidad de los datos, logrando que el error promedio en las predicciones del área quemada (en escala logarítmica) se mantenga estable. Estos valores validan la efectividad de haber priorizado variables críticas como la humedad relativa y el ISI, consolidando a Lasso como la herramienta más fiable y equilibrada para la estimación del riesgo forestal frente a los modelos de regresión simple o logísticos tradicionales.
 
-### Evaluación final (test) con el mejor modelo:
+Nota: Se ha incluido el Accuracy en los modelos de regresión mediante la binarización de sus predicciones (considerando cualquier valor $> 0$ como presencia de incendio).
+
+Nota: El valor NA en la métrica RMSE del modelo logístico se debe a la naturaleza cualitativa de su variable respuesta. Al ser un modelo de clasificación que predice categorías (presencia/ausencia) y no cantidades numéricas, el cálculo del error cuadrático medio no es aplicable, a diferencia de los modelos Lasso y de regresión simple.
+
+## Evaluación final (test) con el mejor modelo:
 
 ```{r}
 
@@ -1918,7 +1810,7 @@ round(comparativa_final, 4)
 
 La evaluación final del modelo Lasso muestra una alta consistencia y estabilidad, con un RMSE de 1.3890 en entrenamiento y 1.4891 en prueba, lo que confirma la ausencia de sobreajuste (overfitting) y una sólida capacidad de generalización. La mínima diferencia entre ambos errores, junto con un MAE de 1.2139 en el conjunto de prueba, valida que la estrategia de regularización y la selección de variables clave (RH e ISI) permiten predecir la magnitud del incendio de forma equilibrada. En conclusión, estos resultados certifican que el modelo es técnicamente robusto y fiable para su aplicación en condiciones reales en el Parque de Montesinho.
 
-# CONCLUSIONES:
+# CONCLUSIONES Y TRABAJO A FUTURO
 
 El análisis integral del dataset Forest Fires del Parque Natural de Montesinho permite extraer las siguientes conclusiones fundamentales sobre la dinámica de los incendios y la eficacia de los modelos estadísticos aplicados:
 
@@ -1943,6 +1835,8 @@ Modelos no lineales y Machine Learning: Implementar algoritmos basados en conjun
 Inclusión de Datos de Gestión y Extinción: El dataset actual es puramente meteorológico y geográfico. Añadir variables como el tiempo de respuesta de las brigadas de bomberos, la distancia a parques de bomberos o la densidad de la red de caminos permitiría explicar por qué incendios bajo condiciones climáticas idénticas terminan con superficies quemadas tan diferentes.
 
 Modelado de la Inflamabilidad por Zonas: Profundizar en el análisis geoespacial mediante modelos de series temporales espaciales, ya que se ha identificado un hotspot recurrente en las coordenadas (4,4) y (4,5) que sugiere factores de relieve, tipo de biomasa o actividad humana no capturados por los índices meteorológicos actuales.
+
+Se ha detectado la presencia de un punto atípico influyente que está afectando al ajuste del modelo ISI y area_log. Como trabajo futuro, se plantea analizar su impacto y valorar su posible eliminación para mejorar el modelo.
 
 # Reparto del trabajo
 
