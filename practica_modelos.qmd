@@ -1041,155 +1041,6 @@ En resumen, el modelo cumple los supuestos de linealidad, homocedasticidad e ind
 
 En conclusión, aunque el modelo cumple algunos de los supuestos del modelo lineal clásico, no los satisface completamente, en particular el de normalidad de los residuos. Además, la variable explicativa no resulta estadísticamente significativa y la capacidad explicativa del modelo es muy baja, por lo que el modelo no resulta adecuado para explicar ni predecir la variable respuesta.
 
-### Entre 'ISI' y 'area_log'
-
-#### Estudiamos si existe relación lineal entre 'ISI' y 'area_log'
-
-```{r}
-plot(datos.train$ISI, datos.train$area_log,
-     main = "Diagrama de dispersión entre ISI y area_log",
-     xlab = "Initial Spread Index (ISI)",
-     ylab = "log(area + 1)",
-     pch = 19, col = "steelblue")
-```
-
-El ISI nos dice qué tan rápido podría propagarse un incendio según el viento y la sequedad, pero los datos muestran que esto no garantiza que el incendio sea grande. La mayoría de los incendios terminan siendo pequeños, aunque el ISI sea alto, y algunos incendios grandes ocurrieron con ISI bajo. La correlación casi nula entre ISI y el área final quemada confirma que ningún factor meteorológico por sí solo predice el tamaño de un incendio. Por eso, para entender y predecir la magnitud real de los incendios, se necesitan modelos más complejos o de Machine Learning, que puedan capturar cómo varios factores interactúan juntos.
-
-#### Ajustamos un modelo de regresión lineal simple
-
-```{r}
-mod_isi <- lm(area_log ~ ISI, data = datos.train)
-summary(mod_isi)
-
-coeficientes <- coef(mod_isi)
-cat('Intercepto beta0 es ', round(coeficientes[1],2), '\n')
-cat('Pendiente beta1 (ISI) es ', round(coeficientes[2],2), '\n')
-```
-
-Los resultados del modelo de regresión lineal simple indican que el Índice de Propagación Inicial (ISI) no presenta una relación significativa con el área quemada. En concreto, el p-valor asociado al ISI (0.844) es superior al nivel de significancia habitual (α = 0.05), lo que implica que no existe evidencia estadística suficiente para afirmar que esta variable influya de manera lineal en la magnitud del incendio.
-
-Asimismo, el coeficiente de determinación (R² ≈ -0.003755) muestra que el modelo apenas explica un 1% de la variabilidad observada, lo que confirma su escasa capacidad predictiva. Aunque el coeficiente estimado para el ISI es negativo, este resultado no es fiable desde el punto de vista estadístico y puede atribuirse al ruido presente en los datos.
-
-En conjunto, estos resultados indican que, si bien el ISI es un indicador técnico del potencial de propagación del fuego, no constituye un buen predictor del tamaño final del incendio en este conjunto de datos.
-
-#### Visualización del modelo ajustado
-
-```{r}
-ggplot(datos.train, aes(x = ISI, y = area_log)) +
-  geom_point(size = 3, alpha = 0.6, color = "steelblue") +
-  geom_smooth(method = "lm", se = TRUE, color = "red", fill = "pink", alpha = 0.3) +
-  labs(title = "Modelo de Regresión: ISI vs Área (log)",
-       x = "ISI",
-       y = "log(area + 1)") +
-  theme_minimal()
-```
-
-#### Pruebas de Significancia y Confianza
-
-```{r}
-# Intervalos de confianza
-ic_isi<-confint(mod_isi)
-ic_isi
-```
-
-Para confirmar la falta de relación entre el ISI y el área quemada, se analizaron los intervalos de confianza al 95% de los coeficientes del modelo. En el caso del ISI, el intervalo obtenido es \[−0.03832,0.03136\]. Dado que este intervalo incluye el valor cero, se concluye que no hay evidencia suficiente para afirmar que el ISI tenga un efecto real sobre el área quemada.
-
-En términos simples, esto significa que no se puede asegurar que el ISI influya en el tamaño del incendio, ya que su impacto podría ser incluso nulo. Por tanto, esta variable no aporta información relevante al modelo, y cualquier pequeña variación observada en su coeficiente se debe al azar o al ruido de los datos, y no a una relación real entre las variables.
-
-#### Diagnosis del modelo
-
-```{r}
-
-# Extraer información del modelo
-residuos <- residuals(mod_isi)
-valores_ajustados <- fitted(mod_isi)
-residuos_std <- rstandard(mod_isi)
-residuos_stud <- rstudent(mod_isi)
-leverage_vals <- hatvalues(mod_isi)
-
-# 1. Residuos vs Ajustados (Linealidad y Varianza)
-p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), 
-             aes(x = x, y = y)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  geom_smooth(method = "loess", se = FALSE, color = "red") +
-  labs(title = "Residuos vs Ajustados",
-       x = "Valores ajustados", y = "Residuos") +
-  theme_classic()
-
-# 2. Q-Q Plot (Normalidad)
-p2 <- ggplot(data.frame(residuos = residuos_std), aes(sample = residuos)) +
-  geom_qq(alpha = 0.7, color = "steelblue") +
-  geom_qq_line(color = "red") +
-  labs(title = "Q-Q Plot") +
-  theme_classic()
-
-# 3. Scale-Location (Homocedasticidad)
-p3 <- ggplot(data.frame(x = valores_ajustados, 
-                        y = sqrt(abs(residuos_std))), 
-             aes(x = x, y = y)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_smooth(method = "loess", se = FALSE, color = "red") +
-  labs(title = "Scale-Location",
-       x = "Valores ajustados",
-       y = "sqrt(|Res. Std|)") +
-  theme_classic()
-
-# 4. Residuos vs Leverage (Puntos influyentes)
-datos_leverage <- data.frame(leverage = leverage_vals, residuos_stud = residuos_stud)
-p4 <- ggplot(datos_leverage, aes(x = leverage, y = residuos_stud)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_hline(yintercept = 0, linetype = "dashed") +
-  geom_hline(yintercept = c(-2, 2), color = "orange", linetype = "dotted") +
-  labs(title = "Residuos vs Leverage",
-       x = "Leverage", y = "Residuos estudentizados") +
-  theme_classic()
-
-# 5. Histograma (Distribución de errores)
-p5 <- ggplot(data.frame(residuos = residuos), aes(x = residuos)) +
-  geom_histogram(aes(y = after_stat(density)), bins = 15,
-                 fill = "lightblue", color = "black", alpha = 0.7) +
-  stat_function(fun = dnorm,
-                args = list(mean = mean(residuos), sd = sd(residuos)),
-                color = "red", linewidth = 1) +
-  labs(title = "Histograma de residuos") +
-  theme_classic()
-
-# 6. Residuos vs Orden (Independencia)
-p6 <- ggplot(data.frame(orden = 1:length(residuos), residuos = residuos),
-             aes(x = orden, y = residuos)) +
-  geom_point(alpha = 0.7, color = "steelblue") +
-  geom_line(alpha = 0.3) +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  labs(title = "Residuos vs Orden") +
-  theme_classic()
-
-# Renderizar cuadrícula
-grid.arrange(p1, p2, p3, p4, p5, p6, ncol = 3)
-```
-
-Interpretación:
-
-Supuesto de Linealidad y Homocedasticidad
-
-El gráfico de Residuos vs. Valores Ajustados revela una distribución no aleatoria de los errores. Se observa una concentración de datos en valores ajustados altos y una ausencia de observaciones en el rango inicial, lo que sugiere que el modelo no captura adecuadamente la estructura de los datos.
-
-Asimismo, el gráfico Scale-Location muestra una tendencia ascendente en la línea de suavizado roja, lo que confirma la presencia de heterocedasticidad. Esto implica que la varianza del error no es constante y aumenta proporcionalmente al valor de la predicción, invalidando la eficiencia de los estimadores por mínimos cuadrados ordinarios (MCO).
-
-Normalidad de los Residuos
-
-El análisis de normalidad a través del Q-Q Plot y el Histograma de Residuos indica desviaciones significativas.
-
-En el Q-Q Plot, los residuos se alejan de la diagonal en ambos extremos, especialmente en la cola superior.
-
-El histograma muestra una asimetría positiva (sesgo a la derecha) pronunciada.
-
-Estos resultados indican que las inferencias estadísticas (intervalos de confianza y pruebas de hipótesis $t$ o $F$) podrían no ser precisas debido al incumplimiento del supuesto de normalidad.
-
-Puntos Influyentes y Outliers:
-
-Podemos observar la presencia de un punto outlier influyente que está distorsionando nuestro diagnóstico del modelo. Su eleminación, se añadirá en el apartado 7, trabajos a futuro.
-
 ### Entre 'temp' y 'area_log'
 
 #### Estudiamos si existe relación lineal entre 'temp' y 'area_log'
@@ -1327,7 +1178,7 @@ print(reset_resultado)
 
 El test RESET de Ramsey arroja un p-valor de 0.000118, el cual es ignificativamente inferior al nivel de significancia estándar (\$\\alpha = 0.05\$). Al ser estadísticamente significativo, se rechaza la hipótesis nula de linealidad, lo que indica que la forma funcional del modelo es inadecuada y existe una mala especificación grave.Este resultado sugiere que la relación entre las variables meteorológicas y el área quemada no es puramente lineal, y que el modelo podría beneficiarse de la inclusión de términos no lineales (como potencias o interacciones) o de una reevaluación de las transformaciones aplicadas. Los gráficos de diagnóstico confirman esta conclusión, mostrando una curvatura persistente en los residuos que invalida el uso de un modelo lineal simple para realizar estimaciones de confianza en este escenario.
 
-Elección modelo simple:
+**Elección modelo simple:**
 
 ```{r}
 # Función para extraer métricas de un modelo lineal
@@ -1342,14 +1193,13 @@ obtener_metricas <- function(modelo) {
 # Creamos la tabla comparativa
 comparativa_simples <- rbind(
   Modelo_RH   = obtener_metricas(mod_rh),
-  Modelo_ISI  = obtener_metricas(mod_isi),
   Modelo_Temp = obtener_metricas(mod_temp)
 )
 
 round(comparativa_simples, 4)
 ```
 
-Tras comparar los modelos de Humedad Relativa (RH), ISI y temperatura, el modelo de RH se confirma como la mejor opción individual. Los datos muestran que presenta el error más bajo (RMSE de 1.4055) y la mayor capacidad explicativa (R² ajustado de 0.0107), superando al modelo de temperatura, cuyo R² ajustado negativo lo invalida como predictor lineal fiable. Esta superioridad numérica, sumada a un mejor cumplimiento de los supuestos de linealidad y homocedasticidad en los gráficos de residuos, justifica la elección de la humedad relativa como la variable individual más relevante para el análisis.
+Tras comparar los modelos de Humedad Relativa (RH) y temperatura, el modelo de RH se confirma como la mejor opción individual. Los datos muestran que presenta el error más bajo (RMSE de 1.4055) y la mayor capacidad explicativa (R² ajustado de 0.0107), superando al modelo de temperatura, cuyo R² ajustado tan bajo lo invalida como predictor lineal fiable. Esta superioridad numérica, sumada a un mejor cumplimiento de los supuestos de linealidad y homocedasticidad en los gráficos de residuos, justifica la elección de la humedad relativa como la variable individual más relevante para el análisis.
 
 ## Modelos lineales múltiples
 
@@ -1654,7 +1504,6 @@ glm_fuego_opt <- step(glm_fuego, direction = "both")
 Tras un proceso iterativo de eliminación stepwise, el modelo óptimo resultante ($AIC = 353.93$) redujo la complejidad eliminando 7 predictores redundantes. Las variables finales seleccionadas son X, FFMC e ISI.
 
 ```{r}
-# Evaluación con Matriz de Confusión (En datos de TEST para mayor rigor)
 # Primero preparamos los datos de test igual que los de train
 datos.train$fuego <- as.factor(ifelse(datos.train$area > 0, "present", "absent"))
 
@@ -1705,10 +1554,8 @@ Hay un outlier que está causando que la gráfica del linear predictor y del rai
 
 # 1. PREPARACIÓN PREVIA
 
-# Creamos el target logarítmico en test si no existe
 datos.valid$area_log <- log1p(datos.valid$area)
 
-# Creamos el target binario para la logística
 datos.valid$fuego <- factor(ifelse(datos.valid$area > 0, "present", "absent"), 
                            levels = c("absent", "present"))
 
@@ -1749,7 +1596,6 @@ La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arr
 ### Modelo de regresión generalizada:
 
 ```{r}
-
 # Crear la variable objetivo binaria 
 datos.valid$fuego <- factor(ifelse(datos.valid$area > 0, "present", "absent"), 
                            levels = c("absent", "present"))
@@ -1843,7 +1689,7 @@ Complejidad y Naturaleza Estocástica: La variable superficie quemada (area) pre
 
 Superioridad del Modelo Lasso: Tras comparar enfoques de regresión simple, múltiple y logística, el modelo Lasso se consolidó como la herramienta más equilibrada. Al penalizar variables redundantes (como la temperatura o la sequía a largo plazo en favor de la humedad inmediata), Lasso obtuvo un RMSE final de 1.4891 y demostró una capacidad de generalización superior. Es notable que Lasso lograra una exactitud de clasificación del 49.23%, superando la capacidad predictiva del modelo logístico en el conjunto de validación.
 
-Identificación de Factores Críticos: El estudio identifica la Humedad Relativa (RH) como el principal factor limitante de la magnitud del incendio y al índice ISI como el motor de su propagación inicial. Asimismo, la binarización estacional y temporal reveló que el riesgo se concentra drásticamente en los meses de calor y durante los fines de semana, sugiriendo un fuerte componente de actividad humana en la ignición.
+Identificación de Factores Críticos: El estudio identifica la Humedad Relativa (RH) como el principal factor limitante de la magnitud del incendio y al índice ISI como el motor de su propagación inicial. Por su parte, la temperatura (temp) se revela como un factor habilitador fundamental, que aunque no muestra una relación lineal directa y significativa con la superficie quemada, define el umbral térmico necesario para el estrés hídrico de la biomasa. Asimismo, la binarización estacional y temporal reveló que el riesgo se concentra drásticamente en los meses de calor y durante los fines de semana, sugiriendo un fuerte componente de actividad humana en la ignición.
 
 En definitiva, este trabajo demuestra que, aunque la predicción exacta de hectáreas quemadas es un reto estadístico complejo debido a la alta aleatoriedad del fenómeno, el uso de técnicas de regularización y selección de variables permite construir herramientas de apoyo a la decisión que superan a los modelos lineales tradicionales, proporcionando una base sólida para la gestión de riesgos forestales.
 
@@ -1858,8 +1704,6 @@ Modelos no lineales y Machine Learning: Implementar algoritmos basados en conjun
 Inclusión de Datos de Gestión y Extinción: El dataset actual es puramente meteorológico y geográfico. Añadir variables como el tiempo de respuesta de las brigadas de bomberos, la distancia a parques de bomberos o la densidad de la red de caminos permitiría explicar por qué incendios bajo condiciones climáticas idénticas terminan con superficies quemadas tan diferentes.
 
 Modelado de la Inflamabilidad por Zonas: Profundizar en el análisis geoespacial mediante modelos de series temporales espaciales, ya que se ha identificado un hotspot recurrente en las coordenadas (4,4) y (4,5) que sugiere factores de relieve, tipo de biomasa o actividad humana no capturados por los índices meteorológicos actuales.
-
-Se ha detectado la presencia de un punto atípico influyente que está afectando al ajuste del modelo ISI y area_log. Como trabajo futuro, se plantea analizar su impacto y valorar su posible eliminación para mejorar el modelo.
 
 # Reparto del trabajo
 
