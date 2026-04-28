@@ -595,15 +595,23 @@ La línea de tendencia presenta una ligera pendiente negativa, lo que podría su
 
 ##### rain_bin
 ```{r}
-ggplot(datos.train, aes(x = rain_bin, y = area_log)) +
-  geom_point(color = "steelblue", alpha = 0.5) +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
-  labs(title = "Relación entre la lluvia (binaria) y el área quemada (escala logarítmica)",
-       x = "Lluvia (mm/m²)",
-       y = "log(area + 1)") +
-  theme_minimal()
+ggplot(datos.train, aes(x = factor(rain_bin), y = area, fill = factor(rain_bin))) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("lightblue", "salmon"),
+                    labels = c("No lluvia", "Lluvia")) +
+  labs(title = "Área quemada según lluvia",
+       x = "Lluvia",
+       y = "Área quemada",
+       fill = "Tipo de día") +
+  theme_classic()
 ```
-Podemos observar que no hay grandes diferencias entre ambos gráficos, por lo que se obtienen las mismas conclusiones que las mencionadas anteriormente.
+El gráfico muestra que la mayoría de los valores del área quemada son cercanos a cero tanto en días con lluvia como sin lluvia.
+
+Sin embargo, los valores más altos del área quemada se observan únicamente en días sin lluvia, mientras que en los días con lluvia apenas hay variabilidad y los valores son muy bajos.
+
+Además, existe un fuerte desbalance, ya que hay muchas más observaciones sin lluvia que con lluvia, lo que dificulta la comparación entre ambos grupos.
+
+En conclusión, los incendios de mayor tamaño se producen en ausencia de lluvia, aunque no se puede afirmar una relación clara debido al bajo número de observaciones con lluvia.
 
 #### Relación entre la velocidad del viento y el área quemada (escala logarítmica).
 
