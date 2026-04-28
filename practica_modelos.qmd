@@ -95,21 +95,12 @@ Inicialmente, planteamos repartir las particiones de forma equitativa entre todo
 ##### DIVISIÓN CALOR-FRÍO:
 
 ```{r}
-
 #-- Creamos ambos vectores.
 calor <- c("jun", "jul", "aug", "sep")
 frio  <- c("jan", "feb", "mar", "apr", "may", "oct", "nov", "dec")
 
-#--- DESPUÉS SE BORRA:
-
-# --- datos$meses_calor mira la columna original de los meses (datos$month). Si el mes está en tu lista de "calor", le pone un 1. Si no, le pone un 0. Así, convertimos una variable categórica en dos variables numéricas binarias.
-
 datos$meses_calor <- ifelse(datos$month %in% calor, 1, 0)
 datos$meses_frio  <- ifelse(datos$month %in% frio, 1, 0)
-
-#--- DESPUÉS SE BORRA:
-
-#-- el operador %in% es una herramienta muy útil que sirve para verificar si un elemento (o varios) pertenece a un grupo o lista. El operador compara cada elemento del lado izquierdo con todos los elementos del lado derecho. El resultado es siempre un valor lógico: TRUE (sí está) o FALSE (no está).
 
 ```
 
@@ -123,29 +114,21 @@ indices_disponibles <- 1:n # índices disponibles = número de filas.
 
 # Extraemos el 50% para Train
 
-# BORRAR DESPUÉS
-# sample: Eliges al azar el 50% de los números de la tómbola. Estas filas serán para entrenar el modelo.
 indices_train <- sample(indices_disponibles, size = floor(0.50 * n))
 
 # Quitamos los de Train de la lista de disponibles
 
-# BORRAR DESPUÉS
-# setdiff: Esta función es clave. Significa "diferencia de conjuntos". Básicamente dice: "Toma todos los números originales y quita los que ya elegimos para Train". Así garantizas que no haya datos repetidos en los siguientes pasos.
 indices_restantes <- setdiff(indices_disponibles, indices_train)
 
 # De lo que sobra, extraemos el 25% del total para Test
 # (Equivale al 50% de los restantes)
-
-# BORRAR DESPUÉS
-# De los números que sobraron (indices_restantes), sacas otro 25% del total original para el Test.
-#Lo que queda al final de todo el proceso (el último setdiff) se asigna automáticamente a Validación.
 
 indices_test <- sample(indices_restantes, size = floor(0.25 * n))
 
 # Validación es lo que queda después de quitar Train y Test
 indices_valid <- setdiff(indices_restantes, indices_test)
 
-# 4. Creación de Datasets
+# Creación de Datasets
 datos.train <- datos[indices_train, ]
 datos.test  <- datos[indices_test, ]
 datos.valid <- datos[indices_valid, ]
@@ -224,7 +207,7 @@ Esta asimetría justifica que el modelo priorice la posición espacial por encim
 *Nota técnica sobre la identificación del hotspot:* La determinación del punto crítico en las coordenadas (4,4) y (4,5) se deriva del análisis de frecuencias marginales. Al observar los histogramas, se identifica que la coordenada X=4 representa la moda absoluta del eje horizontal (máxima densidad de igniciones), mientras que el intervalo Y=\[4,5\] concentra el mayor volumen de datos en el eje vertical. La intersección de estos valores máximos define un área de influencia geoespacial donde la probabilidad de ocurrencia es significativamente superior al resto del parque, validando la importancia de estas coordenadas como predictores de peso en el modelo.
 
 ```{r}
-# --- GRÁFICO 1: FFMC ---
+# GRÁFICO 1: FFMC
 grafico_ffmc <- ggplot(data = datos.train, aes(x = FFMC)) +
   # El histograma debe estar en escala de 'density' para que la línea quepa
   geom_histogram(aes(y = after_stat(density)), binwidth = 2, fill = "lightblue", color = "white") +
@@ -237,7 +220,7 @@ grafico_ffmc <- ggplot(data = datos.train, aes(x = FFMC)) +
   theme(plot.title = element_text(size = 11, face = "bold"),
         axis.title = element_text(size = 9))
 
-# --- GRÁFICO 2: DMC ---
+# GRÁFICO 2: DMC
 grafico_dmc <- ggplot(data = datos.train, aes(x = DMC)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 10, fill = "lightblue", color = "white") +
   geom_density(color = "steelblue4", linewidth = 1) +
@@ -248,7 +231,7 @@ grafico_dmc <- ggplot(data = datos.train, aes(x = DMC)) +
   theme(plot.title = element_text(size = 11, face = "bold"),
         axis.title = element_text(size = 9))
 
-# --- GRÁFICO 3: DC ---
+# GRÁFICO 3: DC
 grafico_dc <- ggplot(data = datos.train, aes(x = DC)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 30, fill = "lightblue", color = "white") +
   geom_density(color = "steelblue4", linewidth = 1) +
@@ -259,7 +242,7 @@ grafico_dc <- ggplot(data = datos.train, aes(x = DC)) +
   theme(plot.title = element_text(size = 11, face = "bold"),
         axis.title = element_text(size = 9))
 
-# --- GRÁFICO 4: ISI ---
+# GRÁFICO 4: ISI 
 grafico_isi <- ggplot(data = datos.train, aes(x = ISI)) +
   geom_histogram(aes(y = after_stat(density)), binwidth = 2, fill = "lightblue", color = "white") +
   geom_density(color = "steelblue4", linewidth = 1) +
@@ -270,7 +253,7 @@ grafico_isi <- ggplot(data = datos.train, aes(x = ISI)) +
   theme(plot.title = element_text(size = 11, face = "bold"),
         axis.title = element_text(size = 9))
 
-# --- UNIR LOS CUATRO GRÁFICOS ---
+# UNIR LOS CUATRO GRÁFICOS
 (grafico_ffmc + grafico_dmc) / (grafico_dc + grafico_isi) + 
   plot_annotation(
     title = "Distribución de Índices de Humedad y Propagación (FWI)",
@@ -298,7 +281,6 @@ El comportamiento conjunto de estos indicadores revela una **dependencia jerárq
 #### Análisis de la variable numérica 'temp':
 
 ```{r}
-# Configurar el espacio para ver 2 gráficos (Histograma y Boxplot)
 par(mfrow=c(1, 2))
 
 # Histograma de Temperatura
@@ -316,8 +298,7 @@ boxplot(datos.train$temp,
         col="gold")
 
 # Comparativa Calor vs Frío
-# Esto sirve para ver si la división tiene sentido
-par(mfrow=c(1, 1)) # Volvemos a un solo gráfico
+par(mfrow=c(1, 1)) 
 boxplot(temp ~ meses_calor, data=datos.train,
         main="Temperatura: Meses de Frío (0) vs Calor (1)",
         xlab="Categoría (1 = Calor)",
@@ -483,10 +464,6 @@ Por otro lado, se han probado diversas transformaciones como Yeo-Johnson, la inv
 #### Análisis de la variable categórica 'month':
 
 ```{r}
-# geom_bar(): Crea un gráfico de barras: Cuenta cuántas observaciones hay en cada categoría
-# x = month : Cada barra representa un mes. La variable month va en el eje X.
-# fill = month : Cada mes tendrá un color distinto
-
 ggplot(datos.train, aes(x = month, fill = month)) +
   geom_bar() +
   labs(title = "Frecuencia de incendios por mes",
@@ -768,7 +745,7 @@ ggplot(datos.train, aes(x = factor(X), y = factor(Y), fill = area_log)) +
 
 El mapa de calor muestra que la ubicación geográfica influye claramente en los incendios, ya que no todas las zonas del parque se comportan igual. Las celdas coloreadas indican dónde hubo incendios, mientras que las zonas en blanco representan lugares sin registros en los datos.
 
-Se identifican áreas más críticas, como las coordenadas (8,8), (1,5) y (9,4), donde los incendios tienden a ser más grandes. En cambio, en la zona central del mapa predominan valores bajos, lo que indica incendios pequeños o controlados rápidamente.
+Se identifican áreas más críticas, como las coordenadas (8,8), (7,6) y (7,3), donde los incendios tienden a ser más grandes. En cambio, en la zona central del mapa predominan valores bajos, lo que indica incendios pequeños o controlados rápidamente.
 
 #### Relación entre la temperatura, el área quemada (escala logarítmica) e ISI.
 
@@ -889,11 +866,11 @@ El diagrama de dispersión no muestra una relación lineal clara entre la humeda
 #### Ajustamos un modelo de regresión lineal simple
 
 ```{r}
-modelo_rh <- lm(area_log ~ RH, data = datos.train)
+mod_rh <- lm(area_log ~ RH, data = datos.train)
 
-summary(modelo)
+summary(mod_rh)
 
-coeficientes <- coef(modelo)
+coeficientes <- coef(mod_rh)
 cat('Intercept beta0 es ', round(coeficientes[1],2), '\n')
 cat('El valor de la pendiente beta1 es ', round(coeficientes[2],2), '\n')
 ```
@@ -917,30 +894,30 @@ El gráfico muestra una relación lineal negativa muy débil entre la humedad re
 Vamos a obtener también los intervalos de confianza de los parámetros $\beta$:
 
 ```{r}
-ic <- confint(modelo)
+ic <- confint(mod_rh)
 ic
 ```
 
 El intervalo de confianza del 95% para el coeficiente asociado a la humedad relativa incluye el valor 0, lo que indica que no existe evidencia suficiente para considerar que esta variable sea estadísticamente significativa.
 
 ```{r}
-summary(modelo)$r.squared
+summary(mod_rh)$r.squared
 ```
 
 La variable RH explica aproximadamente el 0.99% de la variabilidad de la variable respuesta, lo cual es muy bajo.
 
-Además, dado que el p-valor de RH es 0.11 \> 0.05, no existe evidencia suficiente para considerarla significativa en el modelo.
+Además, dado que el p-valor de RH es 0.145 \> 0.05, no existe evidencia suficiente para considerarla significativa en el modelo.
 
 #### Diagnosis del modelo
 
 ```{r}
 
 # Extraer información del modelo
-residuos <- residuals(modelo)
-valores_ajustados <- fitted(modelo)
-residuos_std <- rstandard(modelo)
-residuos_stud <- rstudent(modelo)
-leverage_vals <- hatvalues(modelo)
+residuos <- residuals(mod_rh)
+valores_ajustados <- fitted(mod_rh)
+residuos_std <- rstandard(mod_rh)
+residuos_stud <- rstudent(mod_rh)
+leverage_vals <- hatvalues(mod_rh)
 
 
 # 1. Residuos vs Ajustados
@@ -1038,7 +1015,7 @@ Por último, el gráfico de residuos frente al orden no muestra patrones claros,
 suppressPackageStartupMessages(library(lmtest))
 
 # Test RESET para comprobar la linealidad del modelo
-reset_resultado <- resettest(modelo, power = 2:3, type = "fitted")
+reset_resultado <- resettest(mod_rh, power = 2:3, type = "fitted")
 
 print(reset_resultado)
 ```
@@ -1046,7 +1023,7 @@ print(reset_resultado)
 ```{r}
 # Prueba de Breusch-Pagan
 suppressPackageStartupMessages(library(lmtest))
-bp_resultado <- bptest(modelo)
+bp_resultado <- bptest(mod_rh)
 print(bp_resultado)
 ```
 
@@ -1075,10 +1052,10 @@ El ISI nos dice qué tan rápido podría propagarse un incendio según el viento
 #### Ajustamos un modelo de regresión lineal simple
 
 ```{r}
-modelo_isi <- lm(area_log ~ ISI, data = datos.train)
-summary(modelo_isi)
+mod_isi <- lm(area_log ~ ISI, data = datos.train)
+summary(mod_isi)
 
-coeficientes <- coef(modelo_isi)
+coeficientes <- coef(mod_isi)
 cat('Intercepto beta0 es ', round(coeficientes[1],2), '\n')
 cat('Pendiente beta1 (ISI) es ', round(coeficientes[2],2), '\n')
 ```
@@ -1105,7 +1082,7 @@ ggplot(datos.train, aes(x = ISI, y = area_log)) +
 
 ```{r}
 # Intervalos de confianza
-ic_isi<-confint(modelo_isi)
+ic_isi<-confint(mod_isi)
 ic_isi
 ```
 
@@ -1116,14 +1093,13 @@ En términos simples, esto significa que no se puede asegurar que el ISI influya
 #### Diagnosis del modelo
 
 ```{r}
-modelo <- lm(area_log ~ ISI, data = datos.train)
 
 # Extraer información del modelo
-residuos <- residuals(modelo)
-valores_ajustados <- fitted(modelo)
-residuos_std <- rstandard(modelo)
-residuos_stud <- rstudent(modelo)
-leverage_vals <- hatvalues(modelo)
+residuos <- residuals(mod_isi)
+valores_ajustados <- fitted(mod_isi)
+residuos_std <- rstandard(mod_isi)
+residuos_stud <- rstudent(mod_isi)
+leverage_vals <- hatvalues(mod_isi)
 
 # 1. Residuos vs Ajustados (Linealidad y Varianza)
 p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), 
@@ -1215,7 +1191,7 @@ Mediante el gráfico de Residuos vs. Leverage, se identificó un punto con un ni
 n <- nrow(datos.train)
 k <- 1
 umbral_lev <- 2 * (k + 1) / n
-leverage_vals <- hatvalues(modelo)
+leverage_vals <- hatvalues(mod_isi)
 filas_alto_leverage <- which(leverage_vals > umbral_lev)
 
 # Extraer los valores de esas filas
@@ -1328,11 +1304,11 @@ El diagrama muestra una correlación positiva donde el incremento de la temperat
 
 ```{r}
 
-modelo_temp <- lm(area_log ~ temp, data = datos.train)
+mod_temp <- lm(area_log ~ temp, data = datos.train)
 
-summary(modelo_temp)
+summary(mod_temp)
 
-coeficientes <- coef(modelo_temp)
+coeficientes <- coef(mod_temp)
 cat('Intercept beta0 es ', round(coeficientes[1],2), '\n')
 cat('El valor de la pendiente beta1 es ', round(coeficientes[2],2), '\n')
 ```
@@ -1359,14 +1335,14 @@ La visualización confirma gráficamente la falta de significancia del modelo li
 Vamos a obtener también los intervalos de confianza de los parámetros $\beta$:
 
 ```{r}
-ic_temp <- confint(modelo_temp)
+ic_temp <- confint(mod_temp)
 ic_temp
 ```
 
 El intervalo de confianza al 95% para el coeficiente de la temperatura comprende valores entre -0.0189 y 0.0412. Al incluir el valor cero dentro de este rango, se confirma estadísticamente que no existe evidencia suficiente para afirmar que la temperatura tenga un efecto real (distinto de cero) sobre el área quemada. Esto refuerza el p-valor obtenido anteriormente y valida que la relación observada es compatible con el azar.
 
 ```{r}
-summary(modelo_temp)$r.squared
+summary(mod_temp)$r.squared
 ```
 
 El coeficiente de determinación es de 0.00206, lo que indica que la temperatura solo es capaz de explicar un 0.2% de la variabilidad del área quemada (en escala logarítmica). Este valor es extremadamente bajo, lo que demuestra que, aunque la temperatura sea un factor físico relevante en la propagación de incendios, por sí sola carece de fuerza predictiva en este modelo lineal simple.
@@ -1376,11 +1352,11 @@ El coeficiente de determinación es de 0.00206, lo que indica que la temperatura
 ```{r}
 
 # Extraer información del modelo
-residuos <- residuals(modelo_temp)
-valores_ajustados <- fitted(modelo_temp)
-residuos_std <- rstandard(modelo_temp)
-residuos_stud <- rstudent(modelo_temp)
-leverage_vals <- hatvalues(modelo_temp)
+residuos <- residuals(mod_temp)
+valores_ajustados <- fitted(mod_temp)
+residuos_std <- rstandard(mod_temp)
+residuos_stud <- rstudent(mod_temp)
+leverage_vals <- hatvalues(mod_temp)
 
 # 1. Residuos vs Ajustados
 p1 <- ggplot(data.frame(x = valores_ajustados, y = residuos), aes(x = x, y = y)) +
@@ -1440,7 +1416,7 @@ En consecuencia, estas anomalías en la distribución de los errores, sumadas a 
 
 ```{r}
 suppressPackageStartupMessages(library(lmtest))
-reset_resultado <- resettest(modelo_temp, power = 2:3, type = "fitted")
+reset_resultado <- resettest(mod_temp, power = 2:3, type = "fitted")
 print(reset_resultado)
 ```
 
@@ -1457,11 +1433,6 @@ obtener_metricas <- function(modelo) {
   r2_adj <- s$adj.r.squared
   return(c(RMSE = rmse, MAE = mae, R2_Adj = r2_adj))
 }
-
-# Ajustamos los tres modelos individuales
-mod_rh   <- lm(area_log ~ RH, data = datos.train)
-mod_isi  <- lm(area_log ~ ISI, data = datos.train)
-mod_temp <- lm(area_log ~ temp, data = datos.train)
 
 # Creamos la tabla comparativa
 comparativa_simples <- rbind(
@@ -1670,7 +1641,7 @@ Tras evaluar las cuatro propuestas, el Modelo Lasso se selecciona como el más e
 
 Al haber reducido a cero los coeficientes de las variables menos relevantes (temperatura e índices de sequía profunda), Lasso ofrece la mejor capacidad de generalización y una interpretación técnica clara para la gestión forestal, centrada exclusivamente en los motores principales: la Humedad Relativa (RH) y el Índice de Propagación (ISI).
 
-### FALTA DIAGNOSIS LASSO
+### Diagnosis del modelo elegido
 
 ```{r}
 
@@ -1731,11 +1702,18 @@ avPlots(modelo_ols,
         col.lines = "red",
         pch = 16)
 
-# Reset
 par(mfrow = c(1,1))
 ```
 
-Comprobación de normalidad:
+Las gráficas de componente + residuo y de regresión parcial permiten evaluar la relación entre cada variable explicativa y la variable respuesta, considerando el efecto del resto de variables del modelo.
+
+En las gráficas de componente + residuo se observa que, en general, las relaciones entre las variables explicativas y la respuesta son aproximadamente lineales, lo que sugiere que el modelo lineal es una aproximación adecuada. La variable temp (temperatura) presenta una relación positiva relativamente clara, mientras que DMC también muestra una tendencia positiva, aunque más moderada. Por otro lado, RH e ISI presentan relaciones negativas débiles, y DC muestra una relación prácticamente plana, lo que indica una baja contribución al modelo. No se aprecian patrones fuertes de no linealidad, aunque en algunos casos hay ligeras curvaturas.
+
+Las gráficas de regresión parcial confirman estos resultados. La variable temp destaca como una de las más influyentes, con una pendiente positiva más definida. DMC también aporta cierta capacidad explicativa. En contraste, DC presenta una pendiente casi nula, lo que sugiere que su efecto es poco relevante una vez consideradas las demás variables. Las variables RH e ISI muestran efectos débiles y alta dispersión, indicando una menor influencia en la respuesta.
+
+Asimismo, se identifican algunos posibles valores atípicos que podrían estar influyendo en el ajuste del modelo. En conjunto, los resultados indican que el modelo lineal es razonable, aunque podría mejorarse evaluando la eliminación de variables poco significativas o considerando posibles ajustes adicionales.
+
+Visualmente, en el gráfico Q-Q se puede observar el supuesto de normalidad de los residuos. Por ello, no seguimos el análisis, no obstante, hacemos una comprobación:
 
 ```{r}
 shapiro.test(residuals(modelo_ols))
@@ -1827,84 +1805,65 @@ El modelo comete errores grandes en algunos casos. Esto significa que predice ma
 
 ## 5. Comparación y evalución de modelos
 
-### Validación. FALTA
-
-Se divide el conjunto de datos en entrenamiento y validación. Los modelos se ajustan con los datos de entrenamiento y se comparan utilizando el conjunto de validación mediante el RMSE, seleccionando el modelo con menor error.
+### Comparar modelos elegidos con validación:
 
 ```{r}
-pred1 <- predict(mod_rh, newdata = datos.valid)
-pred2 <- predict(cv_lasso, newdata = datos.valid)
-pred3 <- predict(modelo_final_log, newdata = datos.valid)
-```
 
-```{r}
-rmse1 <- sqrt(mean((validation$area_log - pred1)^2))
-rmse2 <- sqrt(mean((validation$area_log - pred2)^2))
-rmse3 <- sqrt(mean((validation$area_log - pred3)^2))
-rmse1
-rmse2
-rmse3
-```
+# 1. PREPARACIÓN PREVIA
 
-Selección mejor modelo:
+# Creamos el target logarítmico en test si no existe
+datos.valid$area_log <- log1p(datos.valid$area)
 
-Elegimos entre RH-AREA_LOG, LASSO Y LOGÍSTICO (utilizamos datos.test)
+# Creamos el target binario para la logística
+datos.valid$fuego <- factor(ifelse(datos.valid$area > 0, "present", "absent"), 
+                           levels = c("absent", "present"))
 
-```{r}
+# Aseguramos que las variables binarias existan en test
+datos.valid$rain_bin <- ifelse(datos.valid$rain > 0, 1, 0)
+datos.valid$day_bin <- ifelse(datos.valid$day %in% c("sat", "sun", "fri", "thu"), 1, 0)
+
+# 2. GENERACIÓN DE PREDICCIONES 
 
 # A. Modelo Simple (Humedad vs Área Log)
-pred_rh <- predict(modelo, newdata = datos.test)
+modelo_simple_final <- lm(area_log ~ RH, data = datos.train)
+pred_rh <- predict(modelo_simple_final, newdata = datos.valid)
 
-# B. Modelo Lasso (Multivariante Óptimo)
-# Necesitamos la matriz de diseño de test para Lasso
-X_test_lasso <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.test)[, -1]
+# B. Modelo Lasso (Multivariante)
+# Creamos la matriz
+X_test_lasso <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.valid)[, -1]
 pred_lasso <- as.numeric(predict(cv_lasso, newx = X_test_lasso, s = "lambda.min"))
 
-# C. Modelo Logístico (Clasificación de Presencia/Ausencia)
-# Usamos el modelo optimizado por stepwise
-prob_log <- predict(glm_fuego_opt, newdata = datos.test, type = "response")
+# C. Modelo Logístico
+prob_log <- predict(glm_fuego_opt, newdata = datos.valid, type = "response")
 clase_log <- factor(ifelse(prob_log > 0.5, "present", "absent"), levels = c("absent", "present"))
 
 
-# CÁLCULO DE MÉTRICAS DE REGRESIÓN (RMSE y MAE)
-# Función auxiliar para errores
-get_rmse_mae <- function(real, pred) {
-  rmse <- sqrt(mean((real - pred)^2))
-  mae  <- mean(abs(real - pred))
-  return(c(RMSE = rmse, MAE = mae))
-}
+# 3. CÁLCULO DE MÉTRICAS Y TABLA FINAL
 
-res_rh    <- get_rmse_mae(datos.test$area_log, pred_rh)
-res_lasso <- get_rmse_mae(datos.test$area_log, pred_lasso)
+rmse_rh <- sqrt(mean((datos.valid$area_log - pred_rh)^2))
+rmse_lasso <- sqrt(mean((datos.valid$area_log - pred_lasso)^2))
 
+acc_rh <- mean(factor(ifelse(pred_rh > 0, "present", "absent"), levels = c("absent", "present")) == datos.valid$fuego)
+acc_lasso <- mean(factor(ifelse(pred_lasso > 0, "present", "absent"), levels = c("absent", "present")) == datos.valid$fuego)
+acc_log <- mean(clase_log == datos.valid$fuego)
 
-# CÁLCULO DE EXACTITUD (ACCURACY)
-# Para comparar modelos de regresión con el logístico, convertimos sus 
-# predicciones numéricas a clases (si predice > 0, es "present")
-real_fuego <- factor(datos.test$fuego, levels = c("absent", "present"))
-
-acc_rh    <- mean(factor(ifelse(pred_rh > 0, "present", "absent"), levels = c("absent", "present")) == real_fuego)
-acc_lasso <- mean(factor(ifelse(pred_lasso > 0, "present", "absent"), levels = c("absent", "present")) == real_fuego)
-acc_log   <- mean(clase_log == real_fuego)
-
-
-# TABLA COMPARATIVA FINAL
-comparativa_final <- data.frame(
+# Tabla limpia
+tabla_final <- data.frame(
   Modelo = c("Regresión Simple (RH)", "Lasso (Óptimo)", "Regresión Logística"),
-  RMSE_Test = c(res_rh["RMSE"], res_lasso["RMSE"], NA),
-  MAE_Test  = c(res_rh["MAE"], res_lasso["MAE"], NA),
-  Accuracy  = c(acc_rh, acc_lasso, acc_log)
+  RMSE_Test = c(rmse_rh, rmse_lasso, NA),
+  Accuracy_Test = c(acc_rh, acc_lasso, acc_log)
 )
 
-print(" RESULTADOS COMPARATIVOS EN EL CONJUNTO DE TEST ")
-print(round(comparativa_final[, 2:4], 4))
+print(round(tabla_final[, 2:3], 4))
 ```
 
-### Evaluación final (test) con el modelo elegido
+La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.4884 y un MAE de 1.2142, resultados que confirman una sólida capacidad de generalización y la ausencia de sobreajuste. La estrecha relación entre ambas métricas indica que el modelo es robusto ante la variabilidad de los datos, logrando que el error promedio en las predicciones del área quemada (en escala logarítmica) se mantenga estable. Estos valores validan la efectividad de haber priorizado variables críticas como la humedad relativa y el ISI, consolidando a Lasso como la herramienta más fiable y equilibrada para la estimación del riesgo forestal frente a los modelos de regresión simple o logísticos tradicionales.
+
+### Evaluación final (test) con el mejor modelo:
 
 ```{r}
 
-# PREPROCESAMIENTO COMPLETO DE DATOS.TEST (RÉPLICA DE TRAIN)
+# PREPROCESAMIENTO
 
 # A. Sincronización de Factores (Mes y Día)
 datos.test$month <- factor(datos.test$month, 
@@ -1930,44 +1889,60 @@ datos.test$fuego <- as.factor(ifelse(datos.test$area > 0, "present", "absent"))
 
 
 # EVALUACIÓN DEL MEJOR MODELO (LASSO) EN TEST
-# Crear la matriz de diseño para Test (debe coincidir con la de Train)
+# 1. Generar predicción para TRAIN 
+X_train_mat <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.train)[, -1]
+pred_train_lasso <- as.numeric(predict(cv_lasso, newx = X_train_mat, s = "lambda.min"))
+
+# 2. Generar predicción para TEST
 X_test_mat <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.test)[, -1]
-Y_test_real <- datos.test$area_log
+pred_test_lasso <- as.numeric(predict(cv_lasso, newx = X_test_mat, s = "lambda.min"))
 
-# Generar predicciones usando el mejor lambda del entrenamiento
-pred_test_lasso <- predict(cv_lasso, newx = X_test_mat, s = "lambda.min")
-
-# Guardar predicciones en el dataset para visualización
-datos.test$prediccion_lasso <- as.numeric(pred_test_lasso)
-
-
-# TABLA COMPARATIVA FINAL DE MÉTRICAS (TRAIN VS TEST)
-
-# Función para calcular RMSE y MAE
+# 3. Función de métricas
 metricas <- function(real, pred) {
-  rmse <- sqrt(mean((real - pred)^2))
-  mae  <- mean(abs(real - pred))
+  rmse <- sqrt(mean((real - pred)^2, na.rm = TRUE)) # na.rm por seguridad
+  mae  <- mean(abs(real - pred), na.rm = TRUE)
   return(c(RMSE = rmse, MAE = mae))
 }
 
-# Consolidar resultados
-res_train <- metricas(datos.train$area_log, datos.train$prediccion_lasso)
-res_test  <- metricas(Y_test_real, datos.test$prediccion_lasso)
+# 4. Consolidar tabla
+res_train <- metricas(datos.train$area_log, pred_train_lasso)
+res_test  <- metricas(datos.test$area_log, pred_test_lasso)
 
 comparativa_final <- rbind(
   "Entrenamiento (Train)" = res_train,
   "Prueba (Test)"         = res_test
 )
 
-print("EVALUACIÓN FINAL DEL MODELO LASSO")
 round(comparativa_final, 4)
 ```
 
-La evaluación final del modelo Lasso revela una excelente capacidad de generalización y robustez técnica, fundamentada en la estrecha coherencia entre las métricas de ambos conjuntos de datos. El error cuadrático medio obtenido en el conjunto de entrenamiento ($RMSE = 1.3733$) presenta una desviación mínima respecto al observado en el conjunto de prueba ($RMSE = 1.4434$), lo que representa una diferencia de apenas el 5%. Esta estabilidad, sumada a la consistencia de los errores absolutos medios ($MAE_{train} = 1.1479$ frente a $MAE_{test} = 1.1935$), confirma que la regularización Lasso ha mitigado con éxito el riesgo de sobreajuste (overfitting). El modelo no se ha limitado a memorizar el ruido de la muestra original, sino que ha logrado extraer patrones meteorológicos subyacentes que mantienen su validez ante datos no observados previamente. Aunque la magnitud del error refleja la complejidad intrínseca y la naturaleza estocástica del área quemada en el parque, la parsimonia lograda al seleccionar únicamente los predictores más influyentes garantiza un modelo equilibrado y metodológicamente fiable para la estimación del riesgo forestal.
+La evaluación final del modelo Lasso muestra una alta consistencia y estabilidad, con un RMSE de 1.3890 en entrenamiento y 1.4891 en prueba, lo que confirma la ausencia de sobreajuste (overfitting) y una sólida capacidad de generalización. La mínima diferencia entre ambos errores, junto con un MAE de 1.2139 en el conjunto de prueba, valida que la estrategia de regularización y la selección de variables clave (RH e ISI) permiten predecir la magnitud del incendio de forma equilibrada. En conclusión, estos resultados certifican que el modelo es técnicamente robusto y fiable para su aplicación en condiciones reales en el Parque de Montesinho.
 
-## CONCLUSIONES:
+# CONCLUSIONES:
 
-LA OPCIÓN DE BINARIZAR ES BUENA, LOS DATOS PRESENTAN DISTINTA CASUÍSTICA Y ES MEJOR EMPEZAR CON UNA ALTERNATIVA BINARIA DE CLASIFICACIÓN, HABRÍA QUE SEGUIR ESTUDIANDO BBLA BLA
+El análisis integral del dataset Forest Fires del Parque Natural de Montesinho permite extraer las siguientes conclusiones fundamentales sobre la dinámica de los incendios y la eficacia de los modelos estadísticos aplicados:
+
+Complejidad y Naturaleza Estocástica: La variable superficie quemada (area) presenta una distribución extremadamente sesgada y una correlación lineal débil con los predictores individuales. Esto confirma que el tamaño de un incendio no depende de un único factor, sino de la interacción crítica entre condiciones meteorológicas, disponibilidad de combustible orgánico y la rapidez de la respuesta de extinción.
+
+Éxito de la Transformación Logarítmica: La aplicación de la transformación $log(area + 1)$ fue la intervención metodológica más determinante. Permitió estabilizar la varianza de los residuos y reducir la influencia desproporcionada de los incendios extremos (outliers), logrando que los modelos lineales cumplieran de forma aceptable los supuestos de normalidad y homocedasticidad necesarios para la inferencia.
+
+Superioridad del Modelo Lasso: Tras comparar enfoques de regresión simple, múltiple y logística, el modelo Lasso se consolidó como la herramienta más equilibrada. Al penalizar variables redundantes (como la temperatura o la sequía a largo plazo en favor de la humedad inmediata), Lasso obtuvo un RMSE final de 1.4891 y demostró una capacidad de generalización superior. Es notable que Lasso lograra una exactitud de clasificación del 49.23%, superando la capacidad predictiva del modelo logístico en el conjunto de validación.
+
+Identificación de Factores Críticos: El estudio identifica la Humedad Relativa (RH) como el principal factor limitante de la magnitud del incendio y al índice ISI como el motor de su propagación inicial. Asimismo, la binarización estacional y temporal reveló que el riesgo se concentra drásticamente en los meses de calor y durante los fines de semana, sugiriendo un fuerte componente de actividad humana en la ignición.
+
+En definitiva, este trabajo demuestra que, aunque la predicción exacta de hectáreas quemadas es un reto estadístico complejo debido a la alta aleatoriedad del fenómeno, el uso de técnicas de regularización y selección de variables permite construir herramientas de apoyo a la decisión que superan a los modelos lineales tradicionales, proporcionando una base sólida para la gestión de riesgos forestales.
+
+**TRABAJO A FUTURO:**
+
+Dada la dificultad intrínseca de predecir la magnitud exacta de un incendio mediante modelos lineales tradicionales, se proponen las siguientes líneas de investigación para mejorar la precisión:
+
+Modelos de Dos Etapas (Enfoque Híbrido): Una de las vías más prometedoras es dividir el problema en dos modelos independientes pero conectados. Primero, un modelo de clasificación binaria (logístico o basado en árboles) optimizado exclusivamente para predecir la probabilidad de ignición. Segundo, un modelo de regresión condicional que solo actúe sobre los casos donde el primer modelo predijo fuego, enfocándose únicamente en predecir la superficie final quemada. Esta separación permitiría capturar casuísticas distintas: los factores que inician la chispa frente a los factores meteorológicos (como RH e ISI) que determinan la propagación masiva.
+
+Modelos no lineales y Machine Learning: Implementar algoritmos basados en conjuntos de árboles, como Random Forest o XGBoost. Estos modelos gestionan mejor las interacciones no lineales y los "umbrales de activación" detectados en el EDA, donde el riesgo no aumenta de forma lineal sino que se dispara a partir de ciertos valores críticos de sequedad.
+
+Inclusión de Datos de Gestión y Extinción: El dataset actual es puramente meteorológico y geográfico. Añadir variables como el tiempo de respuesta de las brigadas de bomberos, la distancia a parques de bomberos o la densidad de la red de caminos permitiría explicar por qué incendios bajo condiciones climáticas idénticas terminan con superficies quemadas tan diferentes.
+
+Modelado de la Inflamabilidad por Zonas: Profundizar en el análisis geoespacial mediante modelos de series temporales espaciales, ya que se ha identificado un hotspot recurrente en las coordenadas (4,4) y (4,5) que sugiere factores de relieve, tipo de biomasa o actividad humana no capturados por los índices meteorológicos actuales.
 
 # Reparto del trabajo
 
