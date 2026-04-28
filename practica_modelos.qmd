@@ -1223,6 +1223,7 @@ cat("Modelo Múltiple - R² Ajustado:", round(summary(modelo_multiple_orig)$adj.
 # Ver el resumen completo
 summary(modelo_multiple_orig)
 ```
+
 El modelo presenta un ajuste deficiente, con un $R^2$ ajustado de 0.01275, lo que indica que explica una proporción muy reducida de la variabilidad de la variable respuesta. Además, el modelo no resulta significativo de forma global ($p=0.2329$), por lo que el conjunto de variables no tiene capacidad explicativa conjunta.
 
 A nivel individual, únicamente la variable DMC resulta estadísticamente significativa ($p=0.0207$), mientras que el resto de variables no presentan efectos significativos.
@@ -1262,6 +1263,7 @@ mae <- mean(abs(datos.train$area_log - pred))
 rmse
 mae
 ```
+
 El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa ($R^2$ ajustado = 0.0213), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
 
 El test F no es significativo al 5% (p=0.1374), por lo que el modelo en conjunto no resulta significativo.
@@ -1491,7 +1493,7 @@ summary(glm_fuego)
 
 La aparente falta de significancia estadística de los predictores en el modelo saturado no implica que estas carezcan de relevancia explicativa. Por el contrario, este resultado es consistente con la presencia de multicolinealidad entre las variables explicativas.
 
-En concreto, tal y como se observa en la matriz de correlación, variables como el índice FWI y la temperatura presentan una elevada correlación, es decir, comparten una gran proporción de información (varianza común). Esta redundancia dificulta que el modelo logístico pueda separar correctamente el efecto individual de cada variable sobre la variable respuesta.
+En concreto, tal y como se observa en la matriz de correlación, variables como el DC y el DMC presentan una elevada correlación, es decir, comparten una gran proporción de información (varianza común). Esta redundancia dificulta que el modelo logístico pueda separar correctamente el efecto individual de cada variable sobre la variable respuesta.
 
 Como consecuencia, la mayoría de las variables resulta estadísticamente significativa de forma individual, ya que sus efectos se encuentran solapados debido a la alta correlación existente entre ellas.
 
@@ -1503,14 +1505,14 @@ p_val_global <- 1 - pchisq(deviance_diff, df = df_diff)
 cat("P-valor del test global:", p_val_global, "\n")
 ```
 
-El modelo presenta una Null deviance de 356.67 y una Residual deviance de 338.47. Aunque se observa una reducción en la desviación, el test de la razón de verosimilitud sugiere que el modelo saturado no es lo suficientemente parsimonioso. El AIC de 360.23 servirá como base de comparación para los métodos de selección de variables; el objetivo será encontrar un modelo simplificado que reduzca este valor, eliminando el ruido causado por las variables no significativas
+El modelo presenta una Null deviance de 356.67 y una Residual deviance de 338.47, lo que indica una reducción de 18.2 unidades en la desviación. Aunque el test de la razón de verosimilitud sugiere que el modelo no es suficientemente parsimonioso y el test global arroja un p-valor ligeramente por encima del umbral de significancia convencional ($p=0.07$), se identifican además posibles problemas en el ajuste, como separación perfecta en la variable lluvia (rain_bin) y, como ya se ha mencionado, multicolinealidad entre predictores.
 
 ```{r}
 # Selección Automática de Variables 
 glm_fuego_opt <- step(glm_fuego, direction = "both")
 ```
 
-Tras un proceso iterativo de eliminación stepwise, el modelo óptimo resultante ($AIC = 353.93$) redujo la complejidad eliminando 7 predictores redundantes. Las variables finales seleccionadas son X, FFMC e ISI.
+Tras un proceso iterativo de eliminación stepwise, el modelo óptimo resultante ($AIC = 353.93$) redujo la complejidad eliminando 7 predictores redundantes. Las variables finales seleccionadas son X, DMC, rain_bin, RH
 
 ```{r}
 # Primero preparamos los datos de test igual que los de train
@@ -1536,7 +1538,7 @@ print("Odds Ratios (Riesgo relativo):")
 print(odds_ratios)
 ```
 
-El análisis de los Odds Ratios cuantifica la influencia de cada predictor en la probabilidad de ignición. La coordenada geográfica X destaca como el factor de riesgo con mayor impacto unitario (aumento del 11%), seguida por el índice DMC. En contrapartida, la humedad relativa (RH) y, de manera determinante, la lluvia, actúan como factores inhibidores. Estos resultados permiten establecer prioridades en la vigilancia forestal basadas en umbrales de sequedad y ubicación específica
+El análisis de los Odds Ratios permite cuantificar la influencia de los predictores sobre la probabilidad de ignición. La coordenada geográfica X destaca como el factor de riesgo con mayor impacto unitario, mientras que el índice DMC aporta un riesgo acumulativo. Por el contrario, la humedad relativa (RH) y, de manera determinante, la lluvia, actúan como factores inhibidores del fuego.
 
 ```{r}
 # Diagnóstico de Residuos (Binned Plots)
@@ -1545,13 +1547,13 @@ binnedplot(fitted(glm_fuego_opt),
            main = "Binned residual plot (Modelo Logístico)")
 ```
 
-Como podemos observar, la gran mayoría de los residuos agrupados se sitúan dentro de los intervalos de confianza teóricos. Esto confirma que la relación entre las variables meteorológicas y la probabilidad de incendio está correctamente capturada por el modelo logístico, eliminando los problemas de sesgo y varianza inestable que presentaba el enfoque lineal.
+Como podemos observar, la gran mayoría de los residuos agrupados se sitúan dentro de los intervalos de confianza teóricos, lo que indica que el modelo está bien ajustado a los datos.
 
 ```{r}
 residualPlots(glm_fuego_opt)
 ```
 
-Hay un outlier que está causando que la gráfica del linear predictor y del rain_bin no sea lineal. Habrá que hacer un estudio de esos puntos.
+El análisis de los gráficos de residuos muestra que el modelo está bien ajustado. No se observan patrones extraños ni problemas de linealidad, ya que las líneas de suavizado son casi horizontales. Los residuos siguen el patrón esperado en un modelo binario, por lo que su forma es normal y no indica errores. Además, la variabilidad de los residuos es bastante constante aunque hay puntos outliers que requieren más estudio.En conjunto, todo esto confirma que el modelo cumple bien los supuestos y que sus resultados son fiables.
 
 # 5. COMPARACIÓN Y EVALUACIÓN DE MODELOS
 
@@ -1600,7 +1602,7 @@ tabla_final$RMSE_Test <- round(tabla_final$RMSE_Test, 4)
 print(tabla_final)
 ```
 
-La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.3019, resultado que confirma una sólida capacidad de generalización y la ausencia de sobreajuste. Este valor valida la efectividad de haber priorizado variables críticas como la humedad relativa, el ISI y la temperatura.
+La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.2966, resultado que confirma una sólida capacidad de generalización y la ausencia de sobreajuste. Este valor valida la efectividad de haber priorizado variables críticas como la humedad relativa, el ISI y la temperatura.
 
 ### Modelo de regresión generalizada:
 
