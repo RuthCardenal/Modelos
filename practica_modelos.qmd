@@ -1177,7 +1177,7 @@ reset_resultado <- resettest(mod_temp, power = 2:3, type = "fitted")
 print(reset_resultado)
 ```
 
-El test RESET de Ramsey arroja un p-valor de 0.000118, el cual es ignificativamente inferior al nivel de significancia estándar (\$\\alpha = 0.05\$). Al ser estadísticamente significativo, se rechaza la hipótesis nula de linealidad, lo que indica que la forma funcional del modelo es inadecuada y existe una mala especificación grave. Este resultado sugiere que la relación entre las variables meteorológicas y el área quemada no es puramente lineal, y que el modelo podría beneficiarse de la inclusión de términos no lineales (como potencias o interacciones) o de una reevaluación de las transformaciones aplicadas. Los gráficos de diagnóstico confirman esta conclusión, mostrando una curvatura persistente en los residuos que invalida el uso de un modelo lineal simple para realizar estimaciones de confianza en este escenario.
+El test RESET de Ramsey arroja un p-valor de 0.000118, el cual es ignificativamente inferior al nivel de significancia estándar ($alpha = 0.05$). Al ser estadísticamente significativo, se rechaza la hipótesis nula de linealidad, lo que indica que la forma funcional del modelo es inadecuada y existe una mala especificación grave. Este resultado sugiere que la relación entre las variables meteorológicas y el área quemada no es puramente lineal, y que el modelo podría beneficiarse de la inclusión de términos no lineales (como potencias o interacciones) o de una reevaluación de las transformaciones aplicadas. Los gráficos de diagnóstico confirman esta conclusión, mostrando una curvatura persistente en los residuos que invalida el uso de un modelo lineal simple para realizar estimaciones de confianza en este escenario.
 
 **Elección modelo simple:**
 
@@ -1266,11 +1266,11 @@ mae
 
 El modelo con transformación logarítmica (log(area+1)) presenta una baja capacidad explicativa ($R^2$ ajustado = 0.0213), por lo que las variables incluidas explican una pequeña parte de la variabilidad del área quemada.
 
-El test F no es significativo al 5% (p=0.1374), por lo que el modelo en conjunto no resulta significativo.
+El test F no es significativo al 5% ($p=0.1374$), por lo que el modelo en conjunto no resulta significativo.
 
-Solo la variable DMC resulta significativa (p=0.0331), mientras que la mayoría no presentan efecto estadísticamente significativo. Esto indica la posible presencia de variables irrelevantes y la necesidad de simplificar el modelo.
+Solo la variable DMC resulta significativa ($p=0.0331$), mientras que la mayoría no presentan efecto estadísticamente significativo. Esto indica la posible presencia de variables irrelevantes y la necesidad de simplificar el modelo.
 
-El modelo con transformación logarítmica presenta menores errores (RMSE = 1.36756, MAE = 1.12219) que el modelo sin transformar (RMSE = 52.16465, MAE = 19.33335), aunque no son directamente comparables por estar en distintas escalas.
+El modelo con transformación logarítmica presenta menores errores ($RMSE = 1.36756$, MAE = $1.12219$) que el modelo sin transformar ($RMSE = 52.16465$, $MAE = 19.33335$), aunque no son directamente comparables por estar en distintas escalas.
 
 En conjunto, el modelo mejora con la transformación logarítmica, aunque su capacidad explicativa sigue siendo limitada.
 
@@ -1335,7 +1335,8 @@ output <- cbind(
 print(output)
 
 ```
-Los resultados de Lasso muestran un proceso de selección automática de variables: al aplicar la penalización óptima (λ seleccionado mediante validación cruzada), los coeficientes de temp y DC se reducen a cero, por lo que estas variables pueden eliminarse del modelo.
+
+Los resultados de Lasso muestran un proceso de selección automática de variables: al aplicar la penalización óptima (λ seleccionado mediante validación cruzada), los coeficientes de temp y DC se reducen a cero, por lo que estas variables pueden eliminarse del modelo. A diferencia de la regresión lineal clásica (OLS), que mantiene todas las variables en el modelo, Lasso introduce regularización, reduciendo la magnitud de los coeficientes y simplificando la estructura del modelo.
 
 De este modo, Lasso mantiene como predictores activos RH (-0.007), ISI (-0.002) y DMC (0.002), obteniendo un modelo más parsimonioso. RH e ISI presentan relación negativa con el área quemada, mientras que DMC presenta una relación positiva, aunque de baja magnitud.
 
@@ -1343,7 +1344,7 @@ La elección de aplicar el modelo Lasso sobre este subconjunto de variables se b
 
 En conjunto, Lasso permite obtener un modelo más simple y fácilmente interpretable, seleccionando únicamente los predictores más relevantes sin una pérdida apreciable de capacidad explicativa.
 
-### **Comparación:**
+### Comparación:
 
 ```{r}
 # Función para calcular métricas
@@ -1388,13 +1389,14 @@ tabla_final <- rbind(
 # Mostrar resultados
 round(tabla_final, 3)
 ```
+
 Tras evaluar los tres modelos, el modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el modelo completo presenta el menor error ($RMSE = 1.368$), su mayor complejidad puede aumentar el riesgo de sobreajuste. Por otro lado, Lasso presenta un rendimiento similar en términos de error, pero con un mayor $R^2$ ajustado (0.033) y una estructura más parsimoniosa.
 
 Al haber reducido a cero los coeficientes de las variables menos relevantes, Lasso ofrece una interpretación más clara, centrada principalmente en la humedad relativa (RH), el índice de propagación (ISI) y DMC. Esto sugiere una mejor capacidad de generalización del modelo.
 
 ### Diagnosis del modelo elegido
 
-Lasso se emplea para seleccionar variables relevantes, y posteriormente se ajusta un modelo lineal con dichas variables para poder realizar el análisis de los supuestos, ya que estos no son directamente aplicables en modelos penalizados.
+El modelo Lasso se emplea como herramienta de selección de variables, identificando los predictores más relevantes. Dado que los modelos penalizados no permiten evaluar directamente los supuestos del modelo lineal clásico, se ajusta posteriormente un modelo de regresión lineal con las variables seleccionadas. Esto permite realizar el análisis de diagnóstico de forma adecuada, evaluando la validez de los supuestos sobre una estructura equivalente no penalizada.
 
 ```{r}
 modelo_final <- lm(area_log ~ RH + ISI + DMC, data = datos.train)
@@ -1442,6 +1444,7 @@ p4 <- ggplot(data.frame(x = 1:length(residuos),
 
 grid.arrange(p1, p2, p3, p4, ncol = 2)
 ```
+
 ```{r}
 # CPR plots
 crPlots(modelo_final)
@@ -1450,7 +1453,7 @@ crPlots(modelo_final)
 avPlots(modelo_final)
 ```
 
-Los gráficos de componente + residuo muestran que las relaciones entre las variables y la respuesta son aproximadamente lineales. No obstante, en las variables RH e ISI se aprecia una ligera curvatura en dichas líneas, lo que indica pequeñas desviaciones de la linealidad. 
+Los gráficos de componente + residuo muestran que las relaciones entre las variables y la respuesta son aproximadamente lineales. No obstante, en las variables RH e ISI se aprecia una ligera curvatura en dichas líneas, lo que indica pequeñas desviaciones de la linealidad.
 
 Por otro lado, los gráficos de regresión parcial muestran que DMC es la variable con mayor influencia positiva, ya que presenta una pendiente claramente ascendente y una mayor separación respecto a cero. En cambio, RH e ISI presentan pendientes negativas, pero más suaves y con mayor dispersión de los puntos, lo que indica un efecto más débil. Además, se observan algunos valores atípicos (como los puntos etiquetados), que se alejan del patrón general; sin embargo, su número es reducido y no parece que distorsionen de forma significativa la tendencia global del modelo.
 
@@ -1459,12 +1462,14 @@ Por último, en el gráfico Q-Q se aprecian desviaciones respecto a la recta, es
 ```{r}
 shapiro.test(residuals(modelo_final))
 ```
+
 ```{r}
 summary(modelo_final)$adj.r.squared
 ```
-Por último, en el gráfico Q-Q se aprecian desviaciones respecto a la recta, especialmente en los extremos, lo que indica que la normalidad de los residuos no se cumple completamente. Para confirmarlo, se realiza el test de Shapiro-Wilk, obteniéndose un p-valor menor que 0.05, por lo que se rechaza la hipótesis nula de normalidad.
 
-Finalmente, dado que la normalidad de los residuos no se cumple, los supuestos del modelo lineal clásico no se satisfacen completamente. Además, el valor de $R^2$ es muy bajo, lo que indica que el modelo presenta una capacidad explicativa muy limitada y escasa capacidad predictiva.
+Al realizar el test de Shapiro-Wilk, se obtiene un p-valor menor que 0.05, por lo que se rechaza la hipótesis nula de normalidad.
+
+Finalmente, dado que la normalidad de los residuos no se cumple, los supuestos del modelo lineal clásico no se satisfacen plenamente. Además, el valor de R² ajustado es muy bajo, lo que indica que el modelo presenta una capacidad explicativa limitada y una capacidad predictiva reducida.
 
 # 4. MODELOS DE REGRESIÓN GENERALIZADA
 
@@ -1576,6 +1581,7 @@ tabla_final <- data.frame(
 
 print(tabla_final)
 ```
+
 La evaluación final muestra que el modelo de regresión simple (RH) presenta un menor RMSE (1.2846) que el modelo Lasso (1.2946). No obstante, ambos modelos presentan valores muy similares, lo que indica un rendimiento predictivo comparable. En este contexto, Lasso se mantiene como una alternativa válida al ofrecer un modelo más parsimonioso basado en las variables más relevantes (RH, ISI y DMC).
 
 ### Modelo de regresión generalizada:
@@ -1604,9 +1610,10 @@ acc_log_valid <- mean(clase_log_valid == datos.valid$fuego)
 
 cat("El Accuracy en el conjunto de Validación es:", round(acc_log_valid, 4), "\n")
 
-# Matriz de confusión (opcional pero recomendable)
+# Matriz de confusión
 table(Predicho = clase_log_valid, Real = datos.valid$fuego)
 ```
+
 El Accuracy en el conjunto de validación es 0.4385 (43.85%), lo que indica que el modelo clasifica correctamente menos de la mitad de las observaciones. Este valor es inferior al esperado por azar en un problema binario equilibrado (50%), lo que sugiere que el modelo presenta una capacidad predictiva muy limitada en esta tarea.
 
 En conclusión, aunque el modelo de regresión simple presenta un menor error, las diferencias con Lasso son reducidas. Por ello, se opta por Lasso debido a su mayor simplicidad e interpretabilidad, al seleccionar únicamente las variables más relevantes sin una pérdida sustancial de rendimiento.
@@ -1668,6 +1675,7 @@ comparativa_final <- rbind(
 
 round(comparativa_final, 4)
 ```
+
 La comparación entre los errores en entrenamiento y prueba permite evaluar la capacidad de generalización del modelo. En este caso, los valores de RMSE y MAE en el conjunto de test son similares a los obtenidos en entrenamiento, lo que sugiere que el modelo Lasso no presenta un sobreajuste significativo y generaliza de forma razonable.
 
 Aunque el modelo se construye inicialmente con todas las variables (RH, ISI, temp, DC y DMC), Lasso reduce a cero los coeficientes de aquellas menos relevantes, seleccionando automáticamente un subconjunto más parsimonioso de predictores.
