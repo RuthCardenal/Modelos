@@ -1551,74 +1551,65 @@ El análisis de los gráficos de residuos muestra que el modelo está bien ajust
 ### Modelos de Regresión:
 
 ```{r}
-
-# 1. PREPARACIÓN PREVIA
-
+# PREPARACIÓN
 datos.valid$area_log <- log1p(datos.valid$area)
-
-datos.valid$fuego <- factor(ifelse(datos.valid$area > 0, "present", "absent"), 
-                           levels = c("absent", "present"))
-
-# Aseguramos que las variables binarias existan en test
 datos.valid$rain_bin <- ifelse(datos.valid$rain > 0, 1, 0)
-datos.valid$day_bin <- ifelse(datos.valid$day %in% c("sat", "sun", "fri"), 1, 0)
+datos.valid$day_bin <- ifelse(datos.valid$day %in% c("fri", "sat", "sun"), 1, 0)
 
-# 2. GENERACIÓN DE PREDICCIONES 
-
-# A. Modelo Simple (Humedad vs Área Log)
+# MODELO SIMPLE
 modelo_simple_final <- lm(area_log ~ RH, data = datos.train)
 pred_rh <- predict(modelo_simple_final, newdata = datos.valid)
 
-# B. Modelo Lasso (Multivariante)
-# Creamos la matriz
+# LASSO
 X_test_lasso <- model.matrix(area_log ~ RH + ISI + temp + DC + DMC, data = datos.valid)[, -1]
 pred_lasso <- as.numeric(predict(cv_lasso, newx = X_test_lasso, s = "lambda.min"))
 
-
-# 3. CÁLCULO DE MÉTRICAS Y TABLA FINAL
-
+# MÉTRICAS
 rmse_rh <- sqrt(mean((datos.valid$area_log - pred_rh)^2))
 rmse_lasso <- sqrt(mean((datos.valid$area_log - pred_lasso)^2))
 
-
-# Tabla limpia
+# TABLA
 tabla_final <- data.frame(
   Modelo = c("Regresión Simple (RH)", "Lasso (Óptimo)"),
-  RMSE_Test = c(rmse_rh, rmse_lasso)
+  RMSE_Test = round(c(rmse_rh, rmse_lasso), 4)
 )
 
-tabla_final$RMSE_Test <- round(tabla_final$RMSE_Test, 4)
 print(tabla_final)
 ```
-
-La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.2946, resultado que confirma una sólida capacidad de generalización y la ausencia de sobreajuste. Este valor valida la efectividad de haber priorizado variables críticas como la humedad relativa, el ISI y la temperatura.
+La evaluación final muestra que el modelo de regresión simple (RH) presenta un menor RMSE (1.2846) que el modelo Lasso (1.2946). No obstante, ambos modelos presentan valores muy similares, lo que indica un rendimiento predictivo comparable. En este contexto, Lasso se mantiene como una alternativa válida al ofrecer un modelo más parsimonioso basado en las variables más relevantes (RH, ISI y DMC).
 
 ### Modelo de regresión generalizada:
 
 ```{r}
-# Crear la variable objetivo binaria 
+# Variable objetivo
 datos.valid$fuego <- factor(ifelse(datos.valid$area > 0, "present", "absent"), 
                            levels = c("absent", "present"))
 
+# Asegurar niveles
 datos.valid$month <- factor(datos.valid$month, levels = levels(datos.train$month))
 datos.valid$day   <- factor(datos.valid$day, levels = levels(datos.train$day))
 
+# Variables binarias
 datos.valid$rain_bin <- ifelse(datos.valid$rain > 0, 1, 0)
+datos.valid$day_bin  <- ifelse(datos.valid$day %in% c("fri", "sat", "sun"), 1, 0)
 
-
+# Predicción
 prob_log_valid <- predict(glm_fuego_opt, newdata = datos.valid, type = "response")
 
 clase_log_valid <- factor(ifelse(prob_log_valid > 0.5, "present", "absent"), 
                           levels = c("absent", "present"))
 
+# Accuracy
 acc_log_valid <- mean(clase_log_valid == datos.valid$fuego)
 
 cat("El Accuracy en el conjunto de Validación es:", round(acc_log_valid, 4), "\n")
+
+# Matriz de confusión (opcional pero recomendable)
+table(Predicho = clase_log_valid, Real = datos.valid$fuego)
 ```
+El Accuracy en el conjunto de validación es 0.4385 (43.85%), lo que indica que el modelo clasifica correctamente menos de la mitad de las observaciones. Este valor es inferior al esperado por azar en un problema binario equilibrado (50%), lo que sugiere que el modelo presenta una capacidad predictiva muy limitada en esta tarea.
 
-Un Accuracy de 0.4385 (43.85%) indica que el modelo acierta menos de la mitad de las veces. En términos estadísticos, esto significa que el modelo está funcionando peor que el azar (que sería un 50% en una clasificación binaria de "fuego" vs "no fuego").
-
-En conclusión, podemos observar que el modelo de regresión simple (RH) tiene menor RMSE que Lasso pero como ambos tienen RMSE errores parecidos, por interpretación elegimos Lasso.
+En conclusión, aunque el modelo de regresión simple presenta un menor error, las diferencias con Lasso son reducidas. Por ello, se opta por Lasso debido a su mayor simplicidad e interpretabilidad, al seleccionar únicamente las variables más relevantes sin una pérdida sustancial de rendimiento.
 
 ## Evaluación final con el mejor modelo:
 
@@ -1646,7 +1637,8 @@ datos.test$day_bin  <- ifelse(datos.test$day %in% c( "fri", "sat", "sun"), 1, 0)
 datos.test$area_log <- log1p(datos.test$area)
 
 # E. Variable para Regresión Logística (Fuego Presente/Ausente)
-datos.test$fuego <- as.factor(ifelse(datos.test$area > 0, "present", "absent"))
+datos.test$fuego <- factor(ifelse(datos.test$area > 0, "present", "absent"),
+                           levels = c("absent", "present"))
 
 
 # EVALUACIÓN DEL MEJOR MODELO (LASSO) EN TEST
@@ -1676,8 +1668,11 @@ comparativa_final <- rbind(
 
 round(comparativa_final, 4)
 ```
+La comparación entre los errores en entrenamiento y prueba permite evaluar la capacidad de generalización del modelo. En este caso, los valores de RMSE y MAE en el conjunto de test son similares a los obtenidos en entrenamiento, lo que sugiere que el modelo Lasso no presenta un sobreajuste significativo y generaliza de forma razonable.
 
-La evaluación final del modelo Lasso muestra una alta consistencia y estabilidad, con un RMSE de 1.3920 en entrenamiento y 1.4883 en prueba, lo que confirma la ausencia de sobreajuste (overfitting) y una sólida capacidad de generalización. La mínima diferencia entre ambos errores, junto con un MAE de 1.2144 en el conjunto de prueba, valida que la estrategia de regularización y la selección de variables clave (RH, DMC e ISI) permiten predecir la magnitud del incendio de forma equilibrada. En conclusión, estos resultados certifican que el modelo es técnicamente robusto y fiable para su aplicación en condiciones reales en el Parque de Montesinho.
+Aunque el modelo se construye inicialmente con todas las variables (RH, ISI, temp, DC y DMC), Lasso reduce a cero los coeficientes de aquellas menos relevantes, seleccionando automáticamente un subconjunto más parsimonioso de predictores.
+
+La evaluación final del modelo Lasso muestra resultados consistentes, con un RMSE de 1.3920 en entrenamiento y 1.4883 en prueba. La diferencia entre ambos errores es reducida, lo que indica que el modelo presenta una capacidad de generalización razonable. No obstante, los valores obtenidos indican que la capacidad predictiva es limitada, por lo que los resultados deben interpretarse con cautela. En conjunto, Lasso permite obtener un modelo más simple e interpretable, basado en las variables más relevantes (RH, ISI y DMC), sin una pérdida sustancial de rendimiento.
 
 # 6. CONCLUSIONES Y TRABAJO A FUTURO
 
