@@ -1284,7 +1284,6 @@ suppressPackageStartupMessages(library(car))
 
 # Seleccionamos las variables predictoras 
 
-# IMPORTANTE: No hay que meter la variable objetivo 'area_log' aquí dentro.
 predictores <- datos.train[, c("RH", "ISI", "temp", "DC", "DMC")] 
 
 # Análisis de varianza 
@@ -1338,7 +1337,7 @@ print(output)
 ```
 Los resultados de Lasso muestran un proceso de selección automática de variables: al aplicar la penalización óptima (λ seleccionado mediante validación cruzada), los coeficientes de temp y DC se reducen a cero, por lo que estas variables pueden eliminarse del modelo.
 
-De este modo, Lasso mantiene como predictores activos RH (-0.008), ISI (-0.007) y DMC (0.003), obteniendo un modelo más parsimonioso. RH e ISI presentan relación negativa con el área quemada, mientras que DMC presenta una relación positiva, aunque de baja magnitud.
+De este modo, Lasso mantiene como predictores activos RH (-0.007), ISI (-0.002) y DMC (0.002), obteniendo un modelo más parsimonioso. RH e ISI presentan relación negativa con el área quemada, mientras que DMC presenta una relación positiva, aunque de baja magnitud.
 
 La elección de aplicar el modelo Lasso sobre este subconjunto de variables se basa en criterios de simplicidad y en el análisis exploratorio previo, evitando introducir ruido y facilitando la interpretación.
 
@@ -1389,16 +1388,22 @@ tabla_final <- rbind(
 # Mostrar resultados
 round(tabla_final, 3)
 ```
-Tras evaluar los tres modelos, el modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el modelo completo presenta el menor error ($RMSE = 1.368$), su mayor complejidad puede aumentar el riesgo de sobreajuste. Por otro lado, Lasso presenta un rendimiento similar en términos de error, pero con un mayor $R^2$ ajustado (0.038) y una estructura más parsimoniosa.
+Tras evaluar los tres modelos, el modelo Lasso se selecciona como el más equilibrado y eficiente. Aunque el modelo completo presenta el menor error ($RMSE = 1.368$), su mayor complejidad puede aumentar el riesgo de sobreajuste. Por otro lado, Lasso presenta un rendimiento similar en términos de error, pero con un mayor $R^2$ ajustado (0.033) y una estructura más parsimoniosa.
 
 Al haber reducido a cero los coeficientes de las variables menos relevantes, Lasso ofrece una interpretación más clara, centrada principalmente en la humedad relativa (RH), el índice de propagación (ISI) y DMC. Esto sugiere una mejor capacidad de generalización del modelo.
 
 ### Diagnosis del modelo elegido
 
-```{r}
+Lasso se emplea para seleccionar variables relevantes, y posteriormente se ajusta un modelo lineal con dichas variables para poder realizar el análisis de los supuestos, ya que estos no son directamente aplicables en modelos penalizados.
 
-# A. Linealidad y varianza (Residuos vs Ajustados)
-p1 <- ggplot(data.frame(x = fitted(modelo_ols), y = residuals(modelo_ols)),
+```{r}
+modelo_final <- lm(area_log ~ RH + ISI + DMC, data = datos.train)
+
+residuos <- residuals(modelo_final)
+ajustados <- fitted(modelo_final)
+residuos_std <- rstandard(modelo_final)
+
+p1 <- ggplot(data.frame(x = ajustados, y = residuos),
              aes(x = x, y = y)) +
   geom_point(alpha = 0.6, color = "darkgreen") +
   geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
@@ -1408,27 +1413,24 @@ p1 <- ggplot(data.frame(x = fitted(modelo_ols), y = residuals(modelo_ols)),
        y = "Residuos") +
   theme_minimal()
 
-# B. Normalidad (Q-Q Plot)
-p2 <- ggplot(data.frame(res = rstandard(modelo_ols)), aes(sample = res)) +
+p2 <- ggplot(data.frame(res = residuos_std), aes(sample = res)) +
   geom_qq(color = "darkgreen") +
   geom_qq_line(color = "red") +
-  labs(title = "Q-Q Plot de residuos") +
+  labs(title = "Q-Q Plot") +
   theme_minimal()
 
-# C. Homocedasticidad (Scale-Location)
-p3 <- ggplot(data.frame(x = fitted(modelo_ols),
-                        y = sqrt(abs(rstandard(modelo_ols)))),
+p3 <- ggplot(data.frame(x = ajustados,
+                        y = sqrt(abs(residuos_std))),
              aes(x = x, y = y)) +
   geom_point(alpha = 0.6, color = "darkgreen") +
   geom_smooth(method = "loess", se = FALSE, color = "red") +
   labs(title = "Scale-Location",
        x = "Valores ajustados",
-       y = "sqrt(|Residuos estandarizados|)") +
+       y = "sqrt(|Residuos|)") +
   theme_minimal()
 
-# D. Independencia (Residuos vs orden)
-p4 <- ggplot(data.frame(x = 1:length(residuals(modelo_ols)),
-                        y = residuals(modelo_ols)),
+p4 <- ggplot(data.frame(x = 1:length(residuos),
+                        y = residuos),
              aes(x = x, y = y)) +
   geom_line(alpha = 0.3) +
   geom_point(color = "darkgreen") +
@@ -1438,40 +1440,31 @@ p4 <- ggplot(data.frame(x = 1:length(residuals(modelo_ols)),
        y = "Residuos") +
   theme_minimal()
 
-# Mostrar gráficos
 grid.arrange(p1, p2, p3, p4, ncol = 2)
+```
+```{r}
+# CPR plots
+crPlots(modelo_final)
 
-
-# CPR plots (linealidad)
-par(mfrow = c(2,3))
-crPlots(modelo_ols, main = "Componente + Residuo")
-
-# AV plots (importancia variables)
-par(mfrow = c(2,3))
-avPlots(modelo_ols,
-        main = "Regresión parcial",
-        col = "darkgreen",
-        col.lines = "red",
-        pch = 16)
-
-par(mfrow = c(1,1))
+# AV plots
+avPlots(modelo_final)
 ```
 
-Las gráficas de componente + residuo y de regresión parcial permiten analizar la relación entre cada variable explicativa y la variable respuesta teniendo en cuenta el efecto del resto de variables. En conjunto, se observa que las relaciones son aproximadamente lineales, aunque con cierta dispersión.
+Los gráficos de componente + residuo muestran que las relaciones entre las variables y la respuesta son aproximadamente lineales. No obstante, en las variables RH e ISI se aprecia una ligera curvatura en dichas líneas, lo que indica pequeñas desviaciones de la linealidad. 
 
-La variable DMC presenta una tendencia positiva clara, mientras que temp muestra una relación débil. Por otro lado, RH e ISI presentan una ligera tendencia negativa, y DC no muestra una relación clara con la variable respuesta.
-
-Las gráficas de regresión parcial confirman estos resultados: DMC es la variable con mayor relación positiva, mientras que el resto presentan una influencia reducida. Además, se observan algunos valores atípicos, como las observaciones 238, 277 o 416, que se alejan del patrón general.
+Por otro lado, los gráficos de regresión parcial muestran que DMC es la variable con mayor influencia positiva, ya que presenta una pendiente claramente ascendente y una mayor separación respecto a cero. En cambio, RH e ISI presentan pendientes negativas, pero más suaves y con mayor dispersión de los puntos, lo que indica un efecto más débil. Además, se observan algunos valores atípicos (como los puntos etiquetados), que se alejan del patrón general; sin embargo, su número es reducido y no parece que distorsionen de forma significativa la tendencia global del modelo.
 
 Por último, en el gráfico Q-Q se aprecian desviaciones respecto a la recta, especialmente en los extremos, lo que indica que la normalidad de los residuos no se cumple completamente. Para comprobarlo realizamos el test de Shapiro Wilk:
 
 ```{r}
-shapiro.test(residuals(modelo_ols))
+shapiro.test(residuals(modelo_final))
 ```
+```{r}
+summary(modelo_ols)$r.squared
+```
+Por último, en el gráfico Q-Q se aprecian desviaciones respecto a la recta, especialmente en los extremos, lo que indica que la normalidad de los residuos no se cumple completamente. Para confirmarlo, se realiza el test de Shapiro-Wilk, obteniéndose un p-valor menor que 0.05, por lo que se rechaza la hipótesis nula de normalidad.
 
-Rechazamos la hipótesis nula (p_valor \< 0.05), es decir, no cumple el supuesto de normalidad.
-
-Finalmente, al no cumplirse el supuesto de normalidad de los residuos, el modelo no resulta adecuado. En consecuencia, no hace falta seguir analizando el resto de supuestos.
+Finalmente, dado que la normalidad de los residuos no se cumple, los supuestos del modelo lineal clásico no se satisfacen completamente. Además, el valor de $R^2$ es muy bajo, lo que indica que el modelo presenta una capacidad explicativa muy limitada y escasa capacidad predictiva.
 
 # 4. MODELOS DE REGRESIÓN GENERALIZADA
 
@@ -1598,7 +1591,7 @@ tabla_final$RMSE_Test <- round(tabla_final$RMSE_Test, 4)
 print(tabla_final)
 ```
 
-La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.2966, resultado que confirma una sólida capacidad de generalización y la ausencia de sobreajuste. Este valor valida la efectividad de haber priorizado variables críticas como la humedad relativa, el ISI y la temperatura.
+La evaluación final del modelo Lasso en el conjunto de prueba (Validación) arroja un RMSE de 1.2946, resultado que confirma una sólida capacidad de generalización y la ausencia de sobreajuste. Este valor valida la efectividad de haber priorizado variables críticas como la humedad relativa, el ISI y la temperatura.
 
 ### Modelo de regresión generalizada:
 
@@ -1684,7 +1677,7 @@ comparativa_final <- rbind(
 round(comparativa_final, 4)
 ```
 
-La evaluación final del modelo Lasso muestra una alta consistencia y estabilidad, con un RMSE de 1.3890 en entrenamiento y 1.4891 en prueba, lo que confirma la ausencia de sobreajuste (overfitting) y una sólida capacidad de generalización. La mínima diferencia entre ambos errores, junto con un MAE de 1.2139 en el conjunto de prueba, valida que la estrategia de regularización y la selección de variables clave (RH e ISI) permiten predecir la magnitud del incendio de forma equilibrada. En conclusión, estos resultados certifican que el modelo es técnicamente robusto y fiable para su aplicación en condiciones reales en el Parque de Montesinho.
+La evaluación final del modelo Lasso muestra una alta consistencia y estabilidad, con un RMSE de 1.3920 en entrenamiento y 1.4883 en prueba, lo que confirma la ausencia de sobreajuste (overfitting) y una sólida capacidad de generalización. La mínima diferencia entre ambos errores, junto con un MAE de 1.2144 en el conjunto de prueba, valida que la estrategia de regularización y la selección de variables clave (RH, DMC e ISI) permiten predecir la magnitud del incendio de forma equilibrada. En conclusión, estos resultados certifican que el modelo es técnicamente robusto y fiable para su aplicación en condiciones reales en el Parque de Montesinho.
 
 # 6. CONCLUSIONES Y TRABAJO A FUTURO
 
