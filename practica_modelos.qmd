@@ -1460,7 +1460,7 @@ Por último, en el gráfico Q-Q se aprecian desviaciones respecto a la recta, es
 shapiro.test(residuals(modelo_final))
 ```
 ```{r}
-summary(modelo_ols)$r.squared
+summary(modelo_final)$adj.r.squared
 ```
 Por último, en el gráfico Q-Q se aprecian desviaciones respecto a la recta, especialmente en los extremos, lo que indica que la normalidad de los residuos no se cumple completamente. Para confirmarlo, se realiza el test de Shapiro-Wilk, obteniéndose un p-valor menor que 0.05, por lo que se rechaza la hipótesis nula de normalidad.
 
